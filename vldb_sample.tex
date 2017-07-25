@@ -8,6 +8,9 @@
 \usepackage{times}
 \usepackage{color}
 
+\usepackage{url}
+
+
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \renewcommand{\algorithmicrequire}{\textbf{Input:}}
@@ -694,8 +697,8 @@ goes from top to bottom.}
 is from $f_k(x) = -x^{2k} + x^{k}$ with different 
 values of $k$. Each $k$ generates one additional candidate
 model. Snapshots of a galaxy illustrate the impact of
-normalization. Images from the astrophysics 
-application~\cite{MNRAS} motivated this feature.}
+normalization. Images are from the astrophysics 
+application motivated this feature.}
  \label{fig:normalization}
 \end{figure}
 
@@ -1176,10 +1179,11 @@ user corresponds to a data set and
 each data set:
 NIN, GoogLeNet, ResNet-50, AlexNet, BN-AlexNet, ResNet-18, VGG-16, and SqueezeNet.
 Each (user, model) pair is trained with
-an Adam optimizer~\cite{XX} and the
+an Adam optimizer~\cite{XX}. The
 system automatically grid search 
 the initial learning rate in
-\{0.1,0.01,.0.001,0.0001\}.
+\{0.1, 0.01, 0.001, 0.0001\} and
+runs each setting for 100 epochs.
 
 \vspace{0.5em}
 Unfortunately, image classification 
@@ -1279,7 +1283,7 @@ parameters and generate four datasets
 \begin{figure}[t!]
 \centering
 \includegraphics[width=0.4\textwidth]{figures/main}
-\vspace{-1em}
+\vspace{-1.5em}
 \caption{End-to-end performance of
 \texttt{ease.ml} on the
 \textsc{DeepLearning} dataset
@@ -1298,15 +1302,72 @@ scheduled with a round-robin scheduler.}
 
 \subsection{End-to-End Performance of ease.ml}
 
-Finally, we present an end-to-end evaluation of {\bf \eml} on the {\bf DeepLearning} dataset, comparing against two heuristic strategies that are popularly employed in practice by our users: (1) most cited network first ({\bf most cited}); and (2) most recently published network first ({\bf most recent}).
-These heuristics may sound amusing, however, they are reasonable from the viewpoint of scientists outside the computer science area.
-\vspace{-0.5em}
+We validate that \eml is able to achieve
+better global user experience as
+an end-to-end system.
 
+\vspace{-1em}
+\paragraph*{Competitor Strategies}
+We compare \eml with two baseline strategies:
+(1) \textsc{MostRecent} and (2) \textsc{MostCited}.
+Both strategies use a round-robin scheduler
+to choose the next user to serve. Inside
+each user, it chooses the next model to train
+by choosing the networks with the
+most citations on Google Scholar or
+published most recently. These two strategies
+are the strategy that most of our users
+were using before we provide them \eml.
 
-Figure~\ref{fig:end-to-end} presents the comparison results in terms of accuracy loss.
-We observe that {\bf \eml} can outperform the best of the two heuristics by an order of magnitude when comparing the average accuracy loss: The time spent on taking the average accuracy loss down from 0.1 to 0.02 of {\bf most cited} is about 9.8 times of (i.e., 8.8 times longer than) that of {\bf \eml}.
-The gap drops to 3.1 times when comparing the worst-case accuracy losses.
+\vspace{-1em}
+\paragraph*{Protocol} We run all
+three strategies, namely (1) \eml,
+(2) \textsc{MostRecent}, and (3) 
+\textsc{MostCited}, on the 
+dataset \textsc{DeepLearning}.
+We assume that all users enter the system 
+at the same time and randomly sample
+10 users as testing set and the rest of the
+users as training set. For each
+strategy, we run it for 10\% of the
+total run time of all models.
+For \eml, all hyperparameters 
+for GP-UCB are tuned by
+maximizing the log-marginal-likelihood
+as in scikit-learn.\footnote{\scriptsize
+\url{http://scikit-learn.org/stable/modules/gaussian_process.html#gaussian-process}}
+We repeat the experiment for 50 times. 
 
+\vspace{-1em}
+\paragraph*{Metrics} We measure the performance
+of all strategies in two ways.
+For each of the 50 runs, we
+measure the average of accuracy loss
+among all users at a given time
+point. Accuracy loss for each user
+is defined as the gap between
+the best possible accuracy among all
+models and the best accuracy we
+trained for the user so far. We
+then measure the average across
+all 50 runs as the first performance
+measurement. Because
+we treat ourselves as a ``service provider'',
+we also care about the worst case
+performance -- we measure the
+worst case accuracy loss 
+across all 50 runs as another performance
+measure.
+
+\vspace{-1em}
+\paragraph*{Results} Figure~\ref{fig:end-to-end}
+illustrates the result.
+We see that \eml outperforms the best of the two heuristics by up to 9.8$\times$ when comparing the average accuracy loss: The time spent on taking the average accuracy loss down from 0.1 to 0.02 of \textsc{MostCited} is about 9.8 times of (i.e., 8.8 times longer than) that of \eml.
+In the worst case, \eml outperforms 
+both competitors by up to 3.1$\times$.
+We discuss in details about the reason of
+such improvements together with other data
+sets in the rest of this section.
 
 
 \begin{figure}[t!]
@@ -1374,54 +1435,63 @@ The gap drops to 3.1 times when comparing the worst-case accuracy losses.
 \end{figure}
 
 
-\subsection{Performance of Multi-tenant GP-UCB}
 
-We compare {\bf \eml} (i.e., Algorithm~\ref{alg:mc-general}) with two baseline approaches: {\bf random} and {\bf round robin}.
-Similar to Algorithm~\ref{alg:mc-general}, both approaches consist of a user selection phase and a model selection phase at each time step.
-The model selection phase remains the same: We use GP-UCB in the model selection phase for the selected user.
-The user selection phases are different: (1) {\bf random} --- randomly pick the next user; and (2) {\bf round robin} --- pick the next user in a round-robin manner.
-Recall that we have shown {\bf round robin} observes the same regret bound as {\bf \eml}. %(Section~\ref{sec:multitenant:round-robin}).
+\begin{figure*}[t!]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/impact}
+\vspace{-1em}
+\caption{The impact of model correlation and noise: top left --- SYN(0.01, 1.0), top right --- SYN(0.5, 1.0), bottom left --- SYN(0.01, 0.1), and bottom right --- SYN(0.5, 0.1).}
+\label{fig:impact-model-correlation}
+\vskip -2ex
+\end{figure*}
+
+
+\subsection{Multi-tenant Model Selection}
+
+We validate that the end-to-end performance
+improvement of \eml is brought by the
+multi-tenant, cost-aware, model selection
+algorithm we proposed in this paper.
+We follow similar protocol as in the
+end-to-end experiment with the following changes.
+
+\vspace{-0.5em}
+\paragraph*{Stronger Competitors} We compare
+\eml with two even stronger baselines
+than \textsc{MostCited} and \textsc{MostRecent} ---
+instead of using heuristics to choose the
+next models to run for each user, we
+use GP-UCB for each user and
+choose the next users to serve 
+in a \textsc{RoundRobin} 
+and \text{Random} way. In practice,
+we observe \textsc{RoundRobin} outperforms both 
+\textsc{MostCited} and \textsc{MostRecent}
+on the \textsc{DeepLearning} dataset.
+By comparing \eml directly with
+\textsc{RoundRobin}, we get the performance improvement directly caused by 
+the technical contribution of this paper.
+
+\vspace{-0.5em}
+\paragraph*{Robustness to \# Users}
+
+In addition to the end-to-end
+protocol, we also ran
+experiments with 50 users
+in the testing set for datasets
+with more than 100 users. The experiment
+result is similar to the 10 users case.
+Thus, we will only show the
+result for 10 users.
+
 
 %\vspace{-0.5em}
-\subsubsection{Experimental Settings}
-
-GP-UCB requires to specify a prior $(\mu(\mathbf{x}), k(\mathbf{x},\mathbf{x}'))$.
-As a convention, for GP's not conditioned on data, we assume that $\mu=0$ without loss of generality~\cite{SrinivasKKS10}.
-While we can use standard kernel functions for the $k$, we need to come up with a vector representation (i.e., the $\mathbf{x}$) for the models.
-For this purpose, we randomly split a dataset into a ``training set'' and a ``testing set.''
-We use the training set to compute a vector for each model as follows:
-We first evaluate the model on each user in the training set to get its quality, and we then pack these qualities into a ``quality vector'' $\mathbf{x}$ indexed by the users.
-In our experiments, we used 90\% data for training and 10\% data for testing.
-We run each experiment 50 times by using different random splits of the data into training and testing sets.
-
-Given a dataset, for each of the three algorithms, we report its \emph{accuracy loss} as time goes by.
-For a user $i\in[n]$ and a time step $T$, let $a_{i,T}=\max_{1\leq t\leq T} a_{i,t}$ be the best accuracy of evaluating the selected models up to the time $T$, and let $a_i^{*}$ be the best accuracy that the user $i$ can achieve.
-We define the accuracy loss of the user $i$ at the time $T$ as
-\begin{equation}
-l_{i,T}=a_i^{*}-a_{i,T}.
-\end{equation}
-Accordingly, we define the accuracy loss at the time $T$ to be the average accuracy loss of the users:
-\begin{equation}\label{eq:accuracy-loss}
-l_T=\frac{1}{n}\sum\nolimits_{i=1}^{n}l_{i,T}.
-\end{equation}
-Clearly $l_T\to 0$ as $T\to\infty$, if the multi-tenant model selection algorithm is regret-free (i.e., the best model for each user is eventually found).
-Moreover, we have $l_{i,T}\leq r_{i,T}$, namely, the accuracy loss of each user is upper bounded by his/her instantaneous regret.
-
-One may wonder why we report accuracy loss instead of regret.
-The reason is that accuracy loss is a metric we care more in practice.
-Recall the real scenario where the multi-tenant model selection algorithm is applied in our system (Section~\ref{sec:architecture}): At each time step $T$, a user is using the best model he/she has found so far (even if he/she is not scheduled at time $T$) for his/her task, rather than using the model being evaluated at time $T$!
-Therefore, compared with regret, accuracy loss is closer in the sense of characterizing the real user ``happiness.''
-On the other hand, regret is the standard metric when analyzing bandit algorithms.
-Given that accuracy loss is upper bounded by instantaneous regret, the upper bounds for regret apply to accuracy loss as well.%, though it is an open question that if we can have tighter upper bound for accuracy loss.
-
-%\vspace{-0.5em}
-\subsubsection{The Cost-oblivious Case}
+\subsubsection{The Cost-oblivious, Multi-tenant Case}
 
 Figure~\ref{fig:exp:cost-oblivious} presents the results for the cost-oblivious case.
 Each row in Figure~\ref{fig:exp:cost-oblivious} represents the results of the three participating algorithms on one dataset.
 The first column shows the average accuracy loss (of the 50 runs of the same experiment) as the number of runs increases, whereas the second column shows the worst-case accuracy loss (among the 50 runs of the same experiment) as the number of runs increases.
 The third column further shows the model quality distribution (i.e., the distribution of the $x_{i,j}$'s).
-
 
 
 On the two real datasets {\bf DeepLearning} and {\bf 179Classifier}, we observe that both the average and the worst-case accuracy loss of {\bf \eml} drop (often much) faster compared with {\bf random} and {\bf round robin}, whereas {\bf round robin} also outperforms {\bf random}.
@@ -1434,6 +1504,10 @@ This implies that, {\bf \eml} reduces the total regret of all users faster than 
 
 The same pattern retains on the synthetic datasets: {\bf \eml} consistently beats {\bf random} and {\bf round robin}.
 We do observe the impact of model correlation on the performance of the algorithms, though.
+
+
+\paragraph*{Impact of Model Correlation}
+
 In Figure~\ref{fig:impact-model-correlation}, we present more detailed analysis from this aspect.
 As we increase $\sigma_M$ from 0.01 to 0.5, the model correlation increases; as we reduce $\alpha$ from 1.0 to 0.1, the impact of model correlation decreases, which implies that the impact of the model-irrelevant noise (i.e., the user baseline quality) increases.
 As is illustrated in Figure~\ref{fig:impact-model-correlation}, the performance of the algorithms improves upon stronger model correlation.
@@ -1442,8 +1516,21 @@ On the other hand, consider an extreme case when all the models are independent.
 In such circumstance, evaluation of one model cannot gain information about the others, which therefore requires more exploration before the overall picture of model performance becomes clear.
 Meanwhile, dampening the impact of model correlation has similar effects.
 
+
+\begin{figure}[t!]
+\centering
+\includegraphics[width=0.33\textwidth]{figures/deeplearning_lesion}\\
+\vspace{-0.75em}
+\textsc{DeepLearning}\\
+\vspace{-1em}
+\caption{The impact of cost-awareness.}
+\label{fig:impact-cost-aware}
+\vskip -2ex
+\end{figure}
+
+
 %\vspace{-0.5em}
-\subsubsection{The Cost-aware Case}
+\subsubsection{The Cost-aware, Multi-tenant Case}
 
 Figure~\ref{fig:exp:cost-aware} presents the performance of the three algorithms in the cost-aware case.
 For the {\bf DeepLearning} dataset, we use the real cost statistics.
@@ -1457,47 +1544,6 @@ Figure~\ref{fig:impact-cost-aware} further compares the performance of {\bf \eml
 We observe huge performance improvement of the cost-aware {\bf \eml} over the cost-oblivious {\bf \eml}.
 To achieve the same average/worst-case accuracy loss, it takes much longer in the cost-oblivious case.
 
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/impact}
-\vspace{-1em}
-\caption{The impact of model correlation and noise: top left --- SYN(0.01, 1.0), top right --- SYN(0.5, 1.0), bottom left --- SYN(0.01, 0.1), and bottom right --- SYN(0.5, 0.1).}
-\label{fig:impact-model-correlation}
-\vskip -2ex
-\end{figure*}
-
-
-\begin{figure}
-\centering
-\includegraphics[width=0.33\textwidth]{figures/deeplearning_lesion}\\
-\vspace{-0.75em}
-\textsc{DeepLearning}\\
-%\vspace{1em}
-%\includegraphics[width=0.33\textwidth]{figures/classifier_lesion}\\
-%\vspace{-0.75em}
-%\textsc{179Classifier}%\\
-%\vspace{1em}
-%\includegraphics[width=0.33\textwidth]{{figures/syn_0.01_0.1_lesion}.pdf}\\
-%\vspace{-0.75em}
-%\textsc{SYN(0.01, 0.1)}\\
-%\vspace{1em}
-%\includegraphics[width=0.33\textwidth]{{figures/syn_0.01_1.0_lesion}.pdf}\\
-%\vspace{-0.75em}
-%\textsc{SYN(0.01, 1.0)}\\
-%\vspace{1em}
-%\includegraphics[width=0.33\textwidth]{{figures/syn_0.5_0.1_lesion}.pdf}\\
-%\vspace{-0.75em}
-%\textsc{SYN(0.5, 0.1)}\\
-%\vspace{1em}
-%\includegraphics[width=0.33\textwidth]{{figures/syn_0.5_1.0_lesion}.pdf}\\
-%\vspace{-0.75em}
-%\textsc{SYN(0.5, 1.0)}
-\vspace{-1em}
-\caption{The impact of cost-awareness.}
-\label{fig:impact-cost-aware}
-\vskip -2ex
-\end{figure}
 
 \subsection{Impact of the Training Data Size}
 
@@ -1573,6 +1619,40 @@ Experimental evaluation substantiates the effectiveness of \eml, which significa
 
 %\newpage 
 \appendix
+
+
+%\vspace{-0.5em}
+\section{Additional Experimental Settings}
+
+GP-UCB requires to specify a prior $(\mu(\mathbf{x}), k(\mathbf{x},\mathbf{x}'))$.
+As a convention, for GP's not conditioned on data, we assume that $\mu=0$ without loss of generality~\cite{SrinivasKKS10}.
+While we can use standard kernel functions for the $k$, we need to come up with a vector representation (i.e., the $\mathbf{x}$) for the models.
+For this purpose, we randomly split a dataset into a ``training set'' and a ``testing set.''
+We use the training set to compute a vector for each model as follows:
+We first evaluate the model on each user in the training set to get its quality, and we then pack these qualities into a ``quality vector'' $\mathbf{x}$ indexed by the users.
+In our experiments, we used 90\% data for training and 10\% data for testing.
+We run each experiment 50 times by using different random splits of the data into training and testing sets.
+
+Given a dataset, for each of the three algorithms, we report its \emph{accuracy loss} as time goes by.
+For a user $i\in[n]$ and a time step $T$, let $a_{i,T}=\max_{1\leq t\leq T} a_{i,t}$ be the best accuracy of evaluating the selected models up to the time $T$, and let $a_i^{*}$ be the best accuracy that the user $i$ can achieve.
+We define the accuracy loss of the user $i$ at the time $T$ as
+\begin{equation}
+l_{i,T}=a_i^{*}-a_{i,T}.
+\end{equation}
+Accordingly, we define the accuracy loss at the time $T$ to be the average accuracy loss of the users:
+\begin{equation}\label{eq:accuracy-loss}
+l_T=\frac{1}{n}\sum\nolimits_{i=1}^{n}l_{i,T}.
+\end{equation}
+Clearly $l_T\to 0$ as $T\to\infty$, if the multi-tenant model selection algorithm is regret-free (i.e., the best model for each user is eventually found).
+Moreover, we have $l_{i,T}\leq r_{i,T}$, namely, the accuracy loss of each user is upper bounded by his/her instantaneous regret.
+
+One may wonder why we report accuracy loss instead of regret.
+The reason is that accuracy loss is a metric we care more in practice.
+Recall the real scenario where the multi-tenant model selection algorithm is applied in our system (Section~\ref{sec:architecture}): At each time step $T$, a user is using the best model he/she has found so far (even if he/she is not scheduled at time $T$) for his/her task, rather than using the model being evaluated at time $T$!
+Therefore, compared with regret, accuracy loss is closer in the sense of characterizing the real user ``happiness.''
+On the other hand, regret is the standard metric when analyzing bandit algorithms.
+Given that accuracy loss is upper bounded by instantaneous regret, the upper bounds for regret apply to accuracy loss as well.%, though it is an open question that if we can have tighter upper bound for accuracy loss.
+
 
 \section{Details of Synthetic Data Generation}\label{sec:appendix:synthetic}
 
