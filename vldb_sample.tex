@@ -402,12 +402,12 @@ Another limitation is that our
 analysis focuses on GP-UCB and it is not clear
 how to integrate other algorithms such as
 GP-EI and GP-PI into a multi-tenant 
-framework. Last, we assume
-automatic hyper-parameter tuning happens
-as a black box to the model selection 
-subsystem. If we can break this assumption
-in the near future, we expect more significant
-performance improvement.
+framework. Last, we define the global
+happiness of all users as the sum 
+of their regrets. It is not clear how to
+integrate hard rules such as ``deadline''
+associated with each user and design
+algorithms for other aggregation functions.
 
 \vspace{-1em}
 \paragraph*{Overview}
@@ -1120,19 +1120,6 @@ We then switch to the round-robin user selection strategy so that the algorithm 
 We used this hybrid approach in our experimental evaluation (Section~\ref{sec:experiments}), where we set $s=10$.
 As we have just discussed, this hybrid approach observes the same regret bound as Algorithm~\ref{alg:mc-general} because using a round-robin user selection strategy instead won't change the regret bound.
 
-\begin{figure}
-\centering
-\includegraphics[width=0.25\textwidth]{figures/classifier_hybrid}
-\vspace{-1em}
-\caption{The impact of hybrid execution.}
-\label{fig:hybrid-exec}
-\vskip -2ex
-\end{figure}
-
-Figure~\ref{fig:hybrid-exec} illustrates the impact of this hybrid approach (denoted as {\bf \eml} in the figure).
-We use {\bf greedy} and {\bf round robin} to denote Algorithm~\ref{alg:mc-general} and its round-robin variant, respectively.
-We observe that, while {\bf greedy} outperforms {\bf round robin} at the beginning, there is some crossover point as the algorithms proceed where {\bf round robin} becomes superior to {\bf greedy}.
-Switching to {\bf round robin} after that crossover point makes the hybrid execution strategy naturally the best among the three algorithms.
 
 
 \newpage
@@ -1436,14 +1423,14 @@ sets in the rest of this section.
 
 
 
-\begin{figure*}[t!]
+\begin{figure}[t!]
 \centering
-\includegraphics[width=0.8\textwidth]{figures/impact}
-\vspace{-1em}
-\caption{The impact of model correlation and noise: top left --- SYN(0.01, 1.0), top right --- SYN(0.5, 1.0), bottom left --- SYN(0.01, 0.1), and bottom right --- SYN(0.5, 0.1).}
+\includegraphics[width=0.5\textwidth]{figures/impact}
+\vspace{-3em}
+\caption{The impact of model correlation and noise}
 \label{fig:impact-model-correlation}
-\vskip -2ex
-\end{figure*}
+\vspace{-2em}
+\end{figure}
 
 
 \subsection{Multi-tenant Model Selection}
@@ -1464,7 +1451,7 @@ next models to run for each user, we
 use GP-UCB for each user and
 choose the next users to serve 
 in a \textsc{RoundRobin} 
-and \text{Random} way. In practice,
+and \textsc{Random} way. In practice,
 we observe \textsc{RoundRobin} outperforms both 
 \textsc{MostCited} and \textsc{MostRecent}
 on the \textsc{DeepLearning} dataset.
@@ -1484,37 +1471,107 @@ result is similar to the 10 users case.
 Thus, we will only show the
 result for 10 users.
 
-
-%\vspace{-0.5em}
+\vspace{-0.5em}
 \subsubsection{The Cost-oblivious, Multi-tenant Case}
 
-Figure~\ref{fig:exp:cost-oblivious} presents the results for the cost-oblivious case.
-Each row in Figure~\ref{fig:exp:cost-oblivious} represents the results of the three participating algorithms on one dataset.
+We first evaluate the multi-tenant setting
+when all systems are not cost-aware. In this
+case, the performance is measured as in
+\# runs instead of cost (execution time).
+We run each system to allow them to
+train 50\% of all available models.
+
+\vspace{-1em}
+\paragraph*{Results}
+Figure~\ref{fig:exp:cost-oblivious} shows the 
+results. Each row in Figure~\ref{fig:exp:cost-oblivious} corresponds
+to one dataset.
 The first column shows the average accuracy loss (of the 50 runs of the same experiment) as the number of runs increases, whereas the second column shows the worst-case accuracy loss (among the 50 runs of the same experiment) as the number of runs increases.
-The third column further shows the model quality distribution (i.e., the distribution of the $x_{i,j}$'s).
+The third column further shows the model quality distribution of the underlying data set.
 
+On the two datasets with real
+quality, i.e., \texttt{DeepLearning} and 
+\texttt{179Classifier}, we observe that both the 
+average and the worst-case accuracy loss of \eml 
+drops faster, by up to 1.9$\times$,
+compared with \texttt{Random} and 
+\texttt{RoundRobin}. We also observe
+similar result on all four synthetic data sets.
+This shows that \eml reduces the total regret 
+of all users faster than the other two baselines.
 
-On the two real datasets {\bf DeepLearning} and {\bf 179Classifier}, we observe that both the average and the worst-case accuracy loss of {\bf \eml} drop (often much) faster compared with {\bf random} and {\bf round robin}, whereas {\bf round robin} also outperforms {\bf random}.
-This implies that, {\bf \eml} reduces the total regret of all users faster than the other two baselines, and this performance is robust against different training and testing sets.
+Compared with the end-to-end performance
+on the \textsc{DeepLearning} dataset,
+in the cost-oblivious case, the performance
+improvement of \eml is much smaller than
+9.8$\times$. As we will see later, the 
+large end-to-end improvement can only be
+achieved when different models have different
+execution costs, in which case the importance
+of prioritizing between users become
+more important.
 
-%The former is understandable. After all, {\bf \eml} is designed to minimize the total regret.
-%The latter, however, is not presumed.
-%The fact that {\bf \eml} can quickly reduce the maximum regret is essentially a consequence of the user selection strategy it employs. 
-%{\color{red} Recall that {\bf \eml} always picks a user with above-average uncertainty and maximum expected improvement, therefore the user with %the maximum regret can be selected with high probability.}
-
-The same pattern retains on the synthetic datasets: {\bf \eml} consistently beats {\bf random} and {\bf round robin}.
-We do observe the impact of model correlation on the performance of the algorithms, though.
-
+In all experiments, \texttt{RoundRobin} 
+slightly outperforms \texttt{Random}. This is not 
+surprising as the only difference
+between \texttt{RoundRobin} and 
+\texttt{Random} can be explained as two
+uniform sampling without or with replacement.
+The slight improvement of \texttt{RoundRobin} 
+is because the deterministic 
+fairness it enforced on all users.
 
 \paragraph*{Impact of Model Correlation}
 
-In Figure~\ref{fig:impact-model-correlation}, we present more detailed analysis from this aspect.
-As we increase $\sigma_M$ from 0.01 to 0.5, the model correlation increases; as we reduce $\alpha$ from 1.0 to 0.1, the impact of model correlation decreases, which implies that the impact of the model-irrelevant noise (i.e., the user baseline quality) increases.
+One important factors that have impact on
+the performance of \eml is the strength
+of correlation among the quality of all models.
+Intuitively, the stronger the correlation,
+the better \eml would perform because its
+estimation on the quality of other models
+becomes more accurate. We study the
+impact of model correlation with the
+four synthetic datasets
+as in Figure~\ref{fig:impact-model-correlation}.
+As we increase $\sigma_M$ from 0.01 to 0.5, the 
+model correlation increases; as we reduce $\alpha$ from 1.0 to 0.1, the weight of model correlation decreases, which implies that the impact of the model-irrelevant noise increases.
+
 As is illustrated in Figure~\ref{fig:impact-model-correlation}, the performance of the algorithms improves upon stronger model correlation.
 This is understandable: When model correlation becomes stronger, it is easier to distinguish good models from bad ones.
 On the other hand, consider an extreme case when all the models are independent.
 In such circumstance, evaluation of one model cannot gain information about the others, which therefore requires more exploration before the overall picture of model performance becomes clear.
 Meanwhile, dampening the impact of model correlation has similar effects.
+
+
+%\vspace{-0.5em}
+\subsubsection{The Cost-aware, Multi-tenant Case}
+
+We now evaluate the multi-tenant setting when
+all systems are aware of the underlying cost,
+a more realistic scenario that \eml is designed for.
+For the \textsc{DeepLearning} dataset, we use the real cost (execution time) of each model.
+For the \textsc{179Classifier} dataset and the four synthetic datasets, we generate costs randomly.
+
+\vspace{-1em}
+\paragraph*{Results}
+Figure~\ref{fig:exp:cost-aware} shows the result.
+The first two columns show the 
+average accuracy loss and worst-case 
+accuracy loss, respectively. The
+The third column shows the cost distribution
+of the underlying data set. All datasets
+share the same quality distribution as 
+the cost-oblivious case and can be read
+from Figure~\ref{fig:exp:cost-oblivious}.
+
+The relative performance of the three 
+algorithms is similar as in the cost-aware case.
+However, the improvement of
+\eml becomes more significant. This is because
+different costs magnify the difference
+between different users, and thus
+the multitenant algorithm in \eml
+becomes more useful.
 
 
 \begin{figure}[t!]
@@ -1523,35 +1580,91 @@ Meanwhile, dampening the impact of model correlation has similar effects.
 \vspace{-0.75em}
 \textsc{DeepLearning}\\
 \vspace{-1em}
-\caption{The impact of cost-awareness.}
+\caption{Lesion Study: The impact of cost-awareness.}
 \label{fig:impact-cost-aware}
 \vskip -2ex
 \end{figure}
 
 
-%\vspace{-0.5em}
-\subsubsection{The Cost-aware, Multi-tenant Case}
+\vspace{-1em}
+\paragraph*{Impact of Cost-Awareness}
+We validate the impact of using 
+a cost-aware model selection algorithm
+for each user. We conduct a lesion
+study by disabling the cost-aware
+component in \eml (set $c_{i,j}=1$
+for GP-UCB). Figure~\ref{fig:impact-cost-aware}
+shows the result on the \textsc{DeepLearning} dataset.
+We see that considering the
+execution cost of the model significantly
+improves the performance of the system.
+Combining the data distribution in
+Figure~\ref{fig:exp:cost-oblivious}
+and the cost distribution in 
+Figure~\ref{fig:exp:cost-aware},
+we see that this improvement
+is reasonable --- there exists
+models that are significantly faster
+on certain tasks and has quality that
+are only a few points worse than the
+best, most slower model. By integrating
+cost into our algorithm, \eml is
+able to automatically balance between
+execution time and the increase of global
+user experience.
 
-Figure~\ref{fig:exp:cost-aware} presents the performance of the three algorithms in the cost-aware case.
-For the {\bf DeepLearning} dataset, we use the real cost statistics.
-For the {\bf 179Classifier} dataset and the four synthetic datasets, we generate costs randomly from the distribution $\mathcal{U}(0,1)$.
+\vspace{-1em}
+\paragraph*{Impact of the Size of Training Data}
 
+We validate that by providing \eml as
+a service available to multiple users
+and collect the logs from all these users,
+\eml is able to use these information to
+help other users in the system. The
+design of the algorithm in \eml achieves
+this by calculating the kernel of the Guassian Process from the training set --- in other words,
+the performance of a model on other users'
+datasets defines the similarity (correlation)
+among models. To validate the impact
+of this kernel, we decrease the amount
+of training data made available to
+the kernel (10\%, 50\%, 100\%), and compare their performance
+in Figure~\ref{fig:training:oblivious} and~\ref{fig:training:aware}.
+We see that by having more models to 
+calculate kernel significantly improves
+the performance of \eml. However, naturally,
+we also observe the phenomenon of ``diminishing
+return'' --- having 50\% of the
+training data has similar performance
+compared with having 100\% of the training data.
 
+\vspace{-1em}
+\paragraph*{Impact of Hybrid Execution}
+We now validate the impact of the hybrid 
+approach in \eml.
+We disable the hybrid component and uses each
+of the two strategies for comparison: (1)
+\textsc{Greedy} and (2) \textsc{RoundRobin}.
+Figure~\ref{fig:hybrid-exec} shows the result
+on the \textsc{179Classifier} datasets
+for the cost-oblivious case.
 
-The relative performance of the three algorithms is similar in the cost-aware case.
-However, one may now have the question regarding the benefits of considering costs in model selection.
-Figure~\ref{fig:impact-cost-aware} further compares the performance of {\bf \eml} in the cost-oblivious case and in the cost-aware case on the {\bf DeepLearning} dataset, where real cost statistics are available.
-We observe huge performance improvement of the cost-aware {\bf \eml} over the cost-oblivious {\bf \eml}.
-To achieve the same average/worst-case accuracy loss, it takes much longer in the cost-oblivious case.
+We observe that, while \textsc{Greedy} outperforms \textsc{RoundRobin} at the beginning, there is a crossover point as the algorithms proceed where \textsc{RoundRobin} becomes superior to \textsc{Greedy}.
+Switching to \textsc{RoundRobin} after the crossover point makes the hybrid execution strategy the best among the three algorithms.
+The reason that the crossover point exists
+is because of the quality of GP estimator ---
+As the execution proceeds, it is more
+and more important for GP to have a good
+estimation of the model quality to choose
+the next user to serve. When all users'
+current accuracy are high-enough, the modeling
+error of treating the model selection
+problem as a Gaussian Process starts to become
+ineligible. Thus, \textsc{RoundRobin}
+works better for the second half
+by serving users fairly.
 
-
-\subsection{Impact of the Training Data Size}
-
-Since the kernel of the GP prior is obtained from a training set, a natural question is how sensitive the performance of the algorithms is to the availability of training data.
-To investigate this, we further study the impact of the training data size on the performance.
-Figure~\ref{fig:training:oblivious} and~\ref{fig:training:aware} present the results in the cost-oblivious and cost-aware settings, respectively.
-
-\begin{figure}
+\begin{figure}[t!]
 \centering
 \includegraphics[width=0.33\textwidth]{figures/impact_train_nocost}
 \vspace{-1em}
@@ -1560,7 +1673,7 @@ Figure~\ref{fig:training:oblivious} and~\ref{fig:training:aware} present the res
 \vskip -2ex
 \end{figure}
 
-\begin{figure}
+\begin{figure}[t!]
 \centering
 \includegraphics[width=0.33\textwidth]{figures/impact_train_cost}
 \vspace{-1em}
@@ -1569,12 +1682,14 @@ Figure~\ref{fig:training:oblivious} and~\ref{fig:training:aware} present the res
 \vskip -2ex
 \end{figure}
 
-In our experiments, we varied the training data set size from 10\% to 100\% of the original training set size,
-and we show the performance by using 10\%, 50\%, and 100\% training data.
-We observe that using all training data is somehow unnecessary, as using only 50\% training data already achieves similar performance.
-In fact, even if we only use 10\% training data, the performance is not much worse.
-It is therefore convincing that {\bf \eml} can work well even if training data is scarce.
-
+\begin{figure}[t!]
+\centering
+\includegraphics[width=0.17\textwidth]{figures/classifier_hybrid}
+\vspace{-1em}
+\caption{Lesion Study: The impact of hybrid execution.}
+\label{fig:hybrid-exec}
+\vspace{-2em}
+\end{figure}
 
 \section{Related Work}\label{sec:relatedwork}
 
@@ -1603,6 +1718,8 @@ However, none of them has ever considered the aspect of cost in terms of playing
 
 \paragraph*{Automatic Hyperparameter Tuning}
 
+
+
 \section{Conclusion}\label{sec:conclusion}
 
 In this paper, we present the architecture of \eml, a declarative machine learning system that automatically manages an infrastructure shared by multiple users.
@@ -1610,6 +1727,9 @@ We focused on studying one of the key technical problems in \eml, the what we ca
 We gave the first problem formulation and proposed a solution that extends the well-known GP-UCB algorithm into the general multi-tenant, cost-aware setting.
 We further showed that the total regret of the users can be bounded by $O(\sqrt{T})$, which is in line with the best known bound for the standard single-tenant GP-UCB algorithm.
 Experimental evaluation substantiates the effectiveness of \eml, which significantly outperforms popular heuristic approaches currently used in practice as well as a strong round-robin baseline algorithm that observes the same $O(\sqrt{T})$ regret bound.
+
+
+\newpage
 
 %\newpage
 \bibliographystyle{abbrv}
