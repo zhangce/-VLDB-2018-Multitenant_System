@@ -1719,9 +1719,22 @@ multiple devices in the resource pool.
 
 \section{Related Work}\label{sec:relatedwork}
 
+From the system perspective, the most
+similar system is designed by Sparks et al.~\cite{SparksTHFJK15} that integrates automatic model
+selection into Spark ML. 
+
+, though the authors only considered the single-tenant model selection problem.
+
+\paragraph*{Automatic Model Selection}
+
 The problem of automatic model selection and hyper-parameter tuning has been studied extensively. (See a recent survey by Luo~\cite{Luo16} for an overview of this area.)
 Nonetheless, we are unaware of any work that considers the model selection problem in a multi-tenant setting.
 The multi-tenancy circumstance is quite natural when hosting a shared machine learning infrastructure.
+
+Modeling the model selection problem 
+as a multi-armed bandit problem is not new. 
+In fact, it is one of the most popular
+viewpoints~\cite{aaa}. 
 
 Our idea of viewing model selection as a multi-armed bandit problem is inspired by the recent work from Sparks et al.~\cite{SparksTHFJK15}, though the authors only considered the single-tenant model selection problem.
 Historically, the study of the bandit problem can date back to the time of World War II~\cite{Robbins:1952}.
@@ -1734,13 +1747,11 @@ However, none of them has ever considered the aspect of cost in terms of playing
 
 \paragraph*{Multitenant Clouds and Resource Management}
 
-\paragraph*{Machine Learning Clouds}
+\paragraph*{Declarative Machine Learning Clouds}
 
 \paragraph*{Multi-armed Bandits for Systems}
 
 \paragraph*{Learning Curve Estimation}
-
-\paragraph*{Automatic Model Selection}
 
 \paragraph*{Automatic Hyperparameter Tuning}
 
