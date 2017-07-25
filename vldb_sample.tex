@@ -1543,7 +1543,7 @@ In such circumstance, evaluation of one model cannot gain information about the 
 Meanwhile, dampening the impact of model correlation has similar effects.
 
 
-%\vspace{-0.5em}
+\vspace{-0.5em}
 \subsubsection{The Cost-aware, Multi-tenant Case}
 
 We now evaluate the multi-tenant setting when
@@ -1664,10 +1664,36 @@ ineligible. Thus, \textsc{RoundRobin}
 works better for the second half
 by serving users fairly.
 
+\vspace{-1em}
+\paragraph*{Discussion: Single- vs. Multiple- Devices}
+One design decision we made in \eml, which reflects
+in our experiment protocol is that we are
+treating all GPUs we have as {\em a single device}.
+The rational behind this decision is that 
+we are able to obtain linear scale up to
+29GPUs for all of our models. 
+Consider a multi-device alternative:
+With 29 users and we allocate one GPU for each user.
+Both alternatives require the same 
+amount of GPU-time to finish training, however,
+the single-device strategy returns model
+faster for {\em some} users. In fact,
+for our \textsc{DeepLearning} service,
+single-device achieves better 
+accumulated regret among users 
+than the multi-device alternative.
+However, we do realize that this design
+decision is not fundamental and it is 
+important future work to make \eml aware of
+multiple devices in the resource pool.
+
+
+
+
 \begin{figure}[t!]
 \centering
-\includegraphics[width=0.33\textwidth]{figures/impact_train_nocost}
-\vspace{-1em}
+\includegraphics[width=0.3\textwidth]{figures/impact_train_nocost}
+\vspace{-2em}
 \caption{The impact of training set size (cost oblivious).}
 \label{fig:training:oblivious}
 \vskip -2ex
@@ -1675,8 +1701,8 @@ by serving users fairly.
 
 \begin{figure}[t!]
 \centering
-\includegraphics[width=0.33\textwidth]{figures/impact_train_cost}
-\vspace{-1em}
+\includegraphics[width=0.3\textwidth]{figures/impact_train_cost}
+\vspace{-2em}
 \caption{The impact of training set size (cost aware).}
 \label{fig:training:aware}
 \vskip -2ex
@@ -1684,8 +1710,8 @@ by serving users fairly.
 
 \begin{figure}[t!]
 \centering
-\includegraphics[width=0.17\textwidth]{figures/classifier_hybrid}
-\vspace{-1em}
+\includegraphics[width=0.15\textwidth]{figures/classifier_hybrid}
+\vspace{-2em}
 \caption{Lesion Study: The impact of hybrid execution.}
 \label{fig:hybrid-exec}
 \vspace{-2em}
