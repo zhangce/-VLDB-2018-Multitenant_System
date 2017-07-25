@@ -442,11 +442,11 @@ We report experimental evaluation results in Section~\ref{sec:experiments}, summ
 
 \begin{figure*}
 \centering
-\includegraphics[width=0.9\textwidth]{figures/easeml}
+\includegraphics[width=0.8\textwidth]{figures/easeml}
 \vspace{-1em}
 \caption{System architecture of \texttt{ease.ml}.}
 \label{fig:architecture}
-\vskip -2ex
+\vspace{-1em}
 \end{figure*}
 
 
@@ -456,11 +456,14 @@ We report experimental evaluation results in Section~\ref{sec:experiments}, summ
 \vspace{-2em}
 \caption{Formal Syntax of an \eml Program}
 \label{fig:syntax}
+\vspace{-1em}
 \end{figure}
+
 
 %\section{Preliminaries}\label{sec:architecture}
 
 %\subsection{System Architecture of ease.ml}
+\vspace{-1em}
 \section{System Architecture} \label{sec:architecture}
 
 The design goal of \eml is two fold --- (1) provide an abstraction
@@ -491,44 +494,38 @@ motivated by observing our users.
 \paragraph*{Input Program} The input
 of \eml is a programming written in 
 a simple domain specific language (DSL). Figure~\ref{fig:syntax}
-shows the formal syntax of the DSL.
+shows the formal syntax of the DSL. To specify
+a {\em machine learning task}, the user program (\textbf{\texttt{\em prog}})
+contains the information about the {\em shape}
+and {\em structure} of an input object (e.g., images, time series)
+and an output object (e.g., class vector, images, time series).
 
+The design goal of the structure of an input and output
+object is to provide enough flexibility to support most
+workloads we observed from our users. In the current design,
+each object (\textbf{\texttt{\em data\_type}}) contains two parts:
+(1) the ``recursive'' component (\textbf{\texttt{\em rec\_field}})
+and (2) the ``non recursive'' component (\textbf{\texttt{\em nonrec\_field}}).
+The recursive component contains a list of named 
+field of the type of the same object, and the non recursive
+component contains a list of constant-sized tensors.
+This combination of recursive and non-recursive
+components allows \eml to model a range of workloads
+our users need, including image, time series, and trees.
 
-For example, if a user wants to train a classifier
-for RGB images into 3 classes, he/she would submit a job specifying the
-schema:
-\vspace{-0.5em}
-\[
-\texttt{Input = [256, 256, 3]
-        Output = [3]}.
-\]
-\eml then automatically matches all {\em consistent} machine
-learning models (e.g., AlexNet, ResNet-18, GoogLeNet, etc.) 
-that can be used for user's application, and
-explore all these models. Whenever a new model
-finishes running, \eml returns the model.
-The user does not know {\em when}
-and {\em where} a model is trained, and for them 
-\eml is just a ``view'' of the best available model.
-
-
-
-
-More specifically, after a user submits his/her job with the schema specification,
-\eml will (1) perform schema matching and task generation for the job, (2) do some profiling to estimate the cost of the job and submit the job by putting it into a user-level task pool, and (3) allocate computation resource and run the job.
-\eml automatically manages the underlying infrastructure (i.e., computation resources and storage) that is shared by multiple users.
-At any time, \eml tries to maximize the global ``happiness'' of all of its users (we will formalize this in Section~\ref{sec:multitenant}).
-That is, each user will be able to run the best model found so far for his/her task at any given time.
-
-Given the inherent multi-tenant nature of the \eml design, the system employs an
-automatic scheduler to prioritize the execution of
-different models for different users. The key technical question
-here is {\em how can we come up with an execution strategy
-(i.e., one execution order of all models) to maximize the
-``global happiness'' of all of our users?} 
-In the next section, we formalize
-this as the problem we call {\em multitenant model selection},
-a novel technical problem that has not been studied before.
+\vspace{0.5em}
+\noindent
+{\bf (Example)} Figure~\ref{fig:walkthrough} shows
+two example user programs for (1) image classification and (2) time series
+prediction. For image classification, each input
+object is a tensor of the size 256$\times$256$\times$3 and
+each output object is a tensor of the size 1000 corresponding
+to 1000 classes. Here both input
+and output objects only contain the non-recursive component.
+For time series prediction, each object not only
+contains a 1-D tensor, but also contains
+a ``pointer'' to another object of the same type. This
+forms a time series. 
 
 
 \begin{figure}[t]
@@ -536,17 +533,157 @@ a novel technical problem that has not been studied before.
 \includegraphics[width=0.5\textwidth]{figures/arch}
 \vspace{-2em}
 \caption{System Walkthrough}
+\vspace{-2em}
+\label{fig:walkthrough}
 \end{figure}
+
+
+\vspace{-2em}
+\paragraph*{Code Generation and User Interaction}
+
+Given an input program, \eml conducts code generation
+to generate binaries that the user directly interacts with.
+Figure~\ref{fig:walkthrough} illustrates the process.
+
+In the first step of code generation, \eml translate
+the user programs into {\em system data types}, data types
+that the rest of the system is able to understand. 
+Figure~\ref{fig:walkthrough} shows the system data types
+generated in Julia. The translation process is based
+on a very simple operational semantics and we omit the detail
+here. One inherent assumption during the translation
+is that there is no reuse of objects, i.e., we can 
+only generate types corresponding to DAG without loop
+(e.g., singleton, chains, and trees). 
+
+Given the system data types generated by the translation
+procedure, \eml then generates three binaries and
+a Python library.
+The Python library shares the same functionality as
+the binaries but can be used in a programmable way.
+Figure~\ref{fig:walkthrough} shows the three binaries
+and Figure~\ref{fig:architecture} illustrates one
+example in Python. The binaries and the Python library
+contains a unique identifier and an IP address to the
+\eml server. All operations the users conducted with
+the generated binaries and Python library will be 
+sent to the \eml server, which hosts the shared
+storage and pool of computation resources.
+There are three basic operations in \eml.
+
+\noindent
+{\textbf{1. \texttt{feed}}.} The \texttt{feed} operator takes
+as input a set of input/output pairs. \eml provides
+default loader for some popular Tensor types (e.g., loads
+jpeg images into Tensor[A,B,3]). To associate an output
+object and an input object, user can simply pipe a pair of
+objects into the same as in Figure~\ref{fig:walkthrough}, or
+write a {\em labeling function} that takes as input an input
+object and generate an output object as shown in Figure~\ref{fig:architecture}.
+Every time the user invokes the \texttt{feed} operator,
+all data will be sent and stored in the centralized
+\eml server.
+
+\noindent
+{\textbf{2. \texttt{refine}}.} The \texttt{refine} operator
+shows all input/output pairs that the user ever \texttt{feed}'ed
+into the system and allow the user to ``turn on''
+and ``turn off'' each example. This is useful especially when
+the users want to conduct data cleaning on the training set
+to get rid of noisy labels introduced by weak/distant supervision.
+
+\noindent
+{\textbf{2. \texttt{infer}}.} The \texttt{infer} operator
+takes as input an input object and output an output object
+using the \textbf{{\em best model learned so far}}.
+
+\paragraph*{Automatic Model Exploration}
+
+The above interface provides user a high-level abstraction
+in which the user only has a ``view'' of the best available model
+instead of {\em what} model the system trains and 
+{\em when} and {\em where} a model is trained. To enable 
+this high-level interface, automatic model selection plays a
+central role in \eml.
+
+\vspace{0.5em}
+\noindent
+{\bf (Candidate Model Generation: Template Matching)} 
+The first step of automatic
+model exploration is to generate a set of 
+candidate models given a user program. The current
+version of \eml uses a template matching based approach.
+Figure~\ref{fig:templates} shows the current set of
+templates and the corresponding candidate models. 
+The matching happens from the top to the bottom 
+(from more specific template to more general template).
+
+\vspace{0.5em}
+\noindent
+{\bf (Candidate Model Generation: Automatic Normalization)} 
+Other than template matching, another source of candidate models 
+comes from the automatic normalization feature 
+in \eml. For image-shaped templates (e.g., Tensor[A,B,3]),
+most consistent Deep Learning models are designed for
+image data. However, many data from our users, although
+has the shape like an image, have a much larger dynamic
+range than an image. For one astrophysics application~\cite{MNRAS}
+and one proteomics application, the dynamic range could
+vary by more than ten orders of magnitude. In this case,
+simply treating the input as an image results in unusable 
+quality. \eml provides an automatic input/output
+normalization feature by normalizing the input
+with a family of functions as shown in Figure~\ref{fig:normalization}.
+Each normalization function in this family, together with 
+a consistent model, generates one additional 
+candidate model.
+
+\vspace{0.5em}
+\noindent
+{\bf (Automatic Model Selection)} 
+Given a set of candidate models, \eml decides an order of
+execution. The current execution strategy of \eml is to 
+use {\em all} of its resources (29 GPUs) to train a single 
+model in distributed CNTK. We made this design decision 
+because we are able to achieve near-linear scale up
+of training at this scale -- although in the near 
+future \eml needs to allow more flexible resource 
+allocation strategy to support a resource pool 
+with hundreds of GPUs. Because there are different
+users using \eml at the same time, \eml also needs
+to decide which user to serve at the current time.
+This motivates the technical problem of this paper
+and we describe in details in Section~\ref{sec:multitenant}.
+
+\paragraph*{Discussion: Hyperparameter Tuning}
+We highlight one design decision in \eml
+that is not optimal. \eml also conducts automatic
+hyperparamter tuning but treats it as part of the
+training procedure of a model -- for the model selection
+subsystem, when it decides to train a given model,
+it will always invoke a train procedure that conducts
+automatic hyperparamter tuning. A more optimal design 
+would be to fuse the hyperparamter tuning subsystem
+with the model selection subsystem to better
+utilize available resources to maximize the
+{\em global happiness of all users}.
+
+
+
+
+
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.5\textwidth]{figures/models}
-\vspace{-2em}
+\includegraphics[width=0.45\textwidth]{figures/models}
+\vspace{-1em}
 \caption{Templates for candidate model generations. \texttt{A},
 \texttt{B}, \texttt{C}, \texttt{D}, \texttt{E}, and \texttt{F}
 are natural number constants; \texttt{a}, \texttt{b}, and \texttt{c} are of the type \texttt{\em field\_name}. \texttt{*} represents
 matching for arbitrary ``tail'' of an array. Matching order
 goes from top to bottom.}
+\label{fig:templates}
+\vspace{-1em}
 \end{figure}
 
 \begin{figure}[t]
@@ -555,8 +692,9 @@ goes from top to bottom.}
 \vspace{-2em}
 \caption{Automatic normalization in \eml. Normalization function
 is from $f_k(x) = -x^{2k} + x^{k}$ with different 
-values of $k$. Each $k$ generates one additional
+values of $k$. Each $k$ generates one additional candidate
  model.}
+ \label{fig:normalization}
 \end{figure}
 
 
@@ -568,9 +706,9 @@ values of $k$. Each $k$ generates one additional
 %\newpage
 
 
-\newpage
-~
-\newpage
+%\newpage
+%~
+%\newpage
 
 \section{Multi-tenant Model Selection}\label{sec:multitenant}
 
@@ -823,7 +961,7 @@ where $C_1 = 8/ \log(1+\sigma^{-2})\ge 8\sigma^2$, and $\beta^\ast =
 
 \begin{theorem}
   \label{thm:rr}
-  TBA
+  Given $\delta\in (0,1)$ and set $\beta_t^i = 2c^\ast \log\left[\frac{\pi^2 n K^\ast t^}{6\delta}\right]$ with $c^\ast = \max_{i\in [n], k\in [K^i]}\{c^i_k\}$ and $K^\ast = \max_{i\in [n]}\{K^i\}$.
 \end{theorem}
 
 
@@ -905,34 +1043,34 @@ We next discuss this by-product in more detail by presenting a theoretical analy
 
 {\color{red} Multi-tenant, cost-aware case}
 
-Given $\delta\in (0,1)$ and a sequence of positive numbers $\{c_k^i\}$,
-consider the following optimization problem
-\begin{equation}
-  \label{eq:beta-multi}
-  \text{minimize}\quad \max_{t\in [T]}~\beta^i_t,
-\end{equation}
-subject to
-\[
-  \sum_{t=1}^T\sum_{i=1}^n\sum_{k = 1}^{K^i} e^{-\frac{\beta^i_t}{2c^i_k}}\le \delta.
-\]
+% Given $\delta\in (0,1)$ and a sequence of positive numbers $\{c_k^i\}$,
+% consider the following optimization problem
+% \begin{equation}
+%   \label{eq:beta-multi}
+%   \text{minimize}\quad \max_{t\in [T]}~\beta^i_t,
+% \end{equation}
+% subject to
+% \[
+%   \sum_{t=1}^T\sum_{i=1}^n\sum_{k = 1}^{K^i} e^{-\frac{\beta^i_t}{2c^i_k}}\le \delta.
+% \]
 
 \begin{theorem}
   \label{thm:multi-cost}
-  Given $\delta\in (0,1)$ and a sequence of positive numbers $\{c_k^i\}_{k=1}^{K^i}$,
-  and let $\{\beta_t^i\}$ be a solution of \eqref{eq:beta-multi}, then the
+  Given $\delta\in (0,1)$ and set $\beta_t^i = 2c^\ast \log\left[\frac{\pi^2 n K^\ast t^}{6\delta}\right]$ with $c^\ast = \max_{i\in [n], k\in [K^i]}\{c^i_k\}$ and $K^\ast = \max_{i\in [n]}\{K^i\}$. Then the
   total regret of Multi-tenant GP-UCB is bounded above by
   \[
-    C_2 n \sqrt{T}\sqrt{\sum_{i=1}^n I([T(i)])}
+    n \sqrt{T}\sqrt{\sum_{i=1}^n I([T(i)])}
   \]
   with probability at least $1-\delta$,
   where
-  \[
-    C_2 = 2 \sqrt{\frac{c^\ast \beta^\ast}{\log(1 + (\sigma^\ast)^{-2})}},
-  \]
-  with $c^\ast = \max_{i,k}\{c^i_k\}, \beta^\ast =\max_{i,t}\{\beta^i_t\}$ and $\sigma^\ast= \max_{i}\{\sigma^i\}$.
+  \begin{align*}
+    I([T(i)]) & = 2 \sqrt{\frac{c^\ast \beta_T}{\log(1 + (\sigma^\ast)^{-2})}}\\
+    &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2}(\sigma^i_{t-1}(a^i_{t}))^2\right),
+  \end{align*}
+  with $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$.
 \end{theorem}
 
-In particular, if the kernel function or covariance matrix is linear (see
+It is observed that $I([T(i)])$ is proportional to the information gain for each user $i$. In particular, if the kernel function or covariance matrix is linear (see
   Theorem 5 in \cite{srinivas2009gaussian}), then for each $i\in [n]$, the
   order of $I([T(i)])$ is at most $\log(|T(i)|)$. Since
   \[
@@ -946,11 +1084,11 @@ In particular, if the kernel function or covariance matrix is linear (see
   \[
     \sum_{i=1}^n \log(|T(i)|) \le n \log \left(\frac{T}{n}\right).
   \]
-  In this case, the total regret is bounded by
+  In this case, the total regret is bounded (up to some constant) by
   \[
-    C_2 n^{3/2}\sqrt{T \log\left(\frac{T}{n}\right)}.
+ n^{3/2}\sqrt{T \log\left(\frac{T}{n}\right)}.
   \]
-
+For other two common used kernel functions: the Squared Exponential kernel and the Mat\'{e}rn kernel, we can also get a bound, which is sublinear in $T$. We refer to Section 5.2 in \cite{srinivas2009gaussian} for details.
 
 \subsection{Discussion and A Hybrid Approach}
 
@@ -982,17 +1120,13 @@ We use {\bf greedy} and {\bf round robin} to denote Algorithm~\ref{alg:mc-genera
 We observe that, while {\bf greedy} outperforms {\bf round robin} at the beginning, there is some crossover point as the algorithms proceed where {\bf round robin} becomes superior to {\bf greedy}.
 Switching to {\bf round robin} after that crossover point makes the hybrid execution strategy naturally the best among the three algorithms.
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/impact}
-\vspace{-1em}
-\caption{The impact of model correlation and noise: top left --- SYN(0.01, 1.0), top right --- SYN(0.5, 1.0), bottom left --- SYN(0.01, 0.1), and bottom right --- SYN(0.5, 0.1).}
-\label{fig:impact-model-correlation}
-\vskip -2ex
-\end{figure*}
-
 
 \newpage
+~
+\newpage
+
+
+
 
 \section{Experiments}\label{sec:experiments}
 
@@ -1019,8 +1153,24 @@ We evaluate the algorithm on both real and synthetic datasets, and compare its p
 \vspace{-1em}
 \caption{Statistics of Datasets}
 \label{tab:datasets}
-\vskip -4ex
+\vskip -2ex
 \end{figure}
+
+\begin{figure}[t!]
+\centering
+\includegraphics[width=0.4\textwidth]{figures/main}
+\vspace{-2em}
+\caption{End-to-end performance of
+\texttt{ease.ml} on the
+\textsc{DeepLearning} dataset
+compared with two strategies
+popularly used by our users 
+without \texttt{ease.ml}--- (1) most cited network first; and (2) most recently
+published network first.}
+\label{fig:end-to-end}
+\vskip -2ex
+\end{figure}
+
 
 Figure~\ref{tab:datasets} summarizes the datasets we used in our evaluation.
 We employ two real datasets ``{\bf DeepLearning}'' and ``{\bf 179Classifier}'':
@@ -1077,6 +1227,20 @@ Note that here we have implicitly assumed that model correlation is independent 
 This is, however, a simplified assumption.
 It is possible that model correlation may vary across different user datasets.
 We postpone discussion of a more general data generator to Appendix~\ref{sec:appendix:synthetic} that allows for using different model covariance matrices for different users.
+
+
+\subsection{End-to-End Evaluation of ease.ml}
+
+Finally, we present an end-to-end evaluation of {\bf \eml} on the {\bf DeepLearning} dataset, comparing against two heuristic strategies that are popularly employed in practice by our users: (1) most cited network first ({\bf most cited}); and (2) most recently published network first ({\bf most recent}).
+These heuristics may sound amusing, however, they are reasonable from the viewpoint of scientists outside the computer science area.
+\vspace{-0.5em}
+
+
+Figure~\ref{fig:end-to-end} presents the comparison results in terms of accuracy loss.
+We observe that {\bf \eml} can outperform the best of the two heuristics by an order of magnitude when comparing the average accuracy loss: The time spent on taking the average accuracy loss down from 0.1 to 0.02 of {\bf most cited} is about 9.8 times of (i.e., 8.8 times longer than) that of {\bf \eml}.
+The gap drops to 3.1 times when comparing the worst-case accuracy losses.
+
+
 
 \subsection{Performance of Multi-tenant GP-UCB}
 
@@ -1219,6 +1383,17 @@ Figure~\ref{fig:impact-cost-aware} further compares the performance of {\bf \eml
 We observe huge performance improvement of the cost-aware {\bf \eml} over the cost-oblivious {\bf \eml}.
 To achieve the same average/worst-case accuracy loss, it takes much longer in the cost-oblivious case.
 
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/impact}
+\vspace{-1em}
+\caption{The impact of model correlation and noise: top left --- SYN(0.01, 1.0), top right --- SYN(0.5, 1.0), bottom left --- SYN(0.01, 0.1), and bottom right --- SYN(0.5, 0.1).}
+\label{fig:impact-model-correlation}
+\vskip -2ex
+\end{figure*}
+
+
 \begin{figure}
 \centering
 \includegraphics[width=0.33\textwidth]{figures/deeplearning_lesion}\\
@@ -1280,30 +1455,6 @@ We observe that using all training data is somehow unnecessary, as using only 50
 In fact, even if we only use 10\% training data, the performance is not much worse.
 It is therefore convincing that {\bf \eml} can work well even if training data is scarce.
 
-\subsection{End-to-End Evaluation of ease.ml}
-
-Finally, we present an end-to-end evaluation of {\bf \eml} on the {\bf DeepLearning} dataset, comparing against two heuristic strategies that are popularly employed in practice by our users: (1) most cited network first ({\bf most cited}); and (2) most recently published network first ({\bf most recent}).
-These heuristics may sound amusing, however, they are reasonable from the viewpoint of scientists outside the computer science area.
-\vspace{-0.5em}
-
-\begin{figure}[!htb]
-\centering
-\includegraphics[width=0.4\textwidth]{figures/main}
-\vspace{-1em}
-\caption{End-to-end performance of
-\texttt{ease.ml} on the
-\textsc{DeepLearning} dataset
-compared with two strategies
-popularly used by our users 
-without \texttt{ease.ml}--- (1) most cited network first; and (2) most recently
-published network first.}
-\label{fig:end-to-end}
-\vskip -2ex
-\end{figure}
-
-Figure~\ref{fig:end-to-end} presents the comparison results in terms of accuracy loss.
-We observe that {\bf \eml} can outperform the best of the two heuristics by an order of magnitude when comparing the average accuracy loss: The time spent on taking the average accuracy loss down from 0.1 to 0.02 of {\bf most cited} is about 9.8 times of (i.e., 8.8 times longer than) that of {\bf \eml}.
-The gap drops to 3.1 times when comparing the worst-case accuracy losses.
 
 \section{Related Work}\label{sec:relatedwork}
 
