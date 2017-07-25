@@ -693,7 +693,9 @@ goes from top to bottom.}
 \caption{Automatic normalization in \eml. Normalization function
 is from $f_k(x) = -x^{2k} + x^{k}$ with different 
 values of $k$. Each $k$ generates one additional candidate
- model.}
+model. Snapshots of a galaxy illustrate the impact of
+normalization. Images from the astrophysics 
+application~\cite{MNRAS} motivated this feature.}
  \label{fig:normalization}
 \end{figure}
 
@@ -869,34 +871,32 @@ Intuitively, this implies that we need to lower priority for expensive models ev
 
 {\color{red} Single tenant, cost-aware case}
 
-Given $\delta\in (0,1)$ and a sequence of positive numbers $\{c_k\}_{k=1}^K$,
-consider the following optimization problem
-\begin{equation}
-  \label{eq:beta}
-  \text{minimize}\quad \max_{t\in [T]}~\beta_t,
-\end{equation}
-subject to
-\[
-  \sum_{t=1}^T\sum_{k = 1}^K e^{-\frac{\beta_t}{2c_k}}\le \delta.
-\]
+% Given $\delta\in (0,1)$ and a sequence of positive numbers $\{c_k\}_{k=1}^K$,
+% consider the following optimization problem
+% \begin{equation}
+%   \label{eq:beta}
+%   \text{minimize}\quad \max_{t\in [T]}~\beta_t,
+% \end{equation}
+% subject to
+% \[
+%   \sum_{t=1}^T\sum_{k = 1}^K e^{-\frac{\beta_t}{2c_k}}\le \delta.
+% \]
 
 \begin{theorem}
   \label{thm:cost}
-  Given $\delta\in (0,1)$ and a sequence of positive numbers $\{c_k\}_{k=1}^K$,
-  and let $\{\beta_t\}_{t=1}^T$ be a solution of \eqref{eq:beta}. Define
-  \[
-  I(T) := \frac{1}{2}\sum_{t=1}^T\log(1+\sigma^{-2}\sigma^2_{t-1}(a_t)).
-  \]
+  Given $\delta\in (0,1)$ and set $\beta_t = 2c^\ast \log\left[\frac{\pi^2 K t^}{6\delta}\right]$ with $c^\ast = \max_{k\in [K]}\{c_k\}$.
   Then the
   simple regret of the single tenant, cost-aware GP-UCB is bounded above by
-  $\sqrt{C_1\beta^\ast I(T)(\sum_{t=1}^Tc_{a_t})^{-1}}$ with probability at
+  $\sqrt{I(T)/(\sum_{t=1}^Tc_{a_t})}$ with probability at
   least $1-\delta$, i.e.,
   \[
-    \bP\left(\min_{t\in [T]}r_t \le \sqrt{\frac{C_1\beta^\ast I(T)}{\sum_{t=1}^T
+    \bP\left(\min_{t\in [T]}r_t \le \sqrt{\frac{I(T)}{\sum_{t=1}^T
         c_{a_t}}}\right) \ge 1-\delta,
 \]
-where $C_1 = 8/ \log(1+\sigma^{-2})\ge 8\sigma^2$, and $\beta^\ast =
-\argmax_{t\in [T]}\beta_t$.
+where 
+\[
+I(T) = \frac{4\beta_T}{\log(1 + \sigma^{-2})}\sum_{t=1}^T \log(1+\sigma^{-2}\sigma^2_{t-1}(a_t))
+\]
 \end{theorem}
 
 
@@ -961,7 +961,18 @@ where $C_1 = 8/ \log(1+\sigma^{-2})\ge 8\sigma^2$, and $\beta^\ast =
 
 \begin{theorem}
   \label{thm:rr}
-  Given $\delta\in (0,1)$ and set $\beta_t^i = 2c^\ast \log\left[\frac{\pi^2 n K^\ast t^}{6\delta}\right]$ with $c^\ast = \max_{i\in [n], k\in [K^i]}\{c^i_k\}$ and $K^\ast = \max_{i\in [n]}\{K^i\}$.
+  Given $\delta\in (0,1)$ and set $\beta_t^i = 2c^\ast \log\left[\frac{\pi^2 n K^\ast t^2}{6\delta}\right]$ with $c^\ast = \max_{i\in [n], k\in [K^i]}\{c^i_k\}$ and $K^\ast = \max_{i\in [n]}\{K^i\}$. Then the
+  total regret of Round Robin GP-UCB is bounded above by
+  \[
+     \sqrt{n T}\sum_{i=1}^n \sqrt{I([T(i)])}
+  \]
+  with probability at least $1-\delta$,
+  where
+  \begin{align*}
+    I([T(i)]) & = 4 \sqrt{\frac{c^\ast \beta^\ast}{\log(1 + (\sigma^\ast)^{-2})}}\\
+    &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2}(\sigma^i_{t-1}(a^i_{t}))^2\right),
+  \end{align*}
+  with $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$ and $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$.
 \end{theorem}
 
 
@@ -1831,7 +1842,8 @@ which completes the proof.
         & = 2  \sum_{t=1}^T \sum_{i=1}^n \sqrt{c^i_{a^i_{t}}\beta^i_{t^i}}\sigma^i_{t-1}(a^i_{t^i})\\
     & = \sum_{i=1}^n\sum_{t\in T(i)} 2n\sqrt{c^i_{a^i_{t}}\beta^i_{t^i}}\sigma^i_{t-1}(a^i_{t})\\
     & \le 2n \sqrt{c^\ast\beta^\ast}\sum_{i=1}^n\sum_{t\in T(i)}\sigma^i_{t-1}(a^i_{t})\\
-    & \le 2n \sqrt{c^\ast\beta^\ast}\sum_{i=1}^n\sqrt{|T(i)|}\sqrt{\sum_{t\in T(i)} (\sigma^i_{t-1}(a^i_{t}))^2}.
+    & \le 2n \sqrt{c^\ast\beta^\ast}\sum_{i=1}^n\sqrt{|T(i)|}\sqrt{\sum_{t\in T(i)} (\sigma^i_{t-1}(a^i_{t}))^2}\\
+    & \le 2n \sqrt{c^\ast\beta^\ast}\sum_{i=1}^n\sqrt{\frac{2T}{n}}\sqrt{\sum_{t\in T(i)} (\sigma^i_{t-1}(a^i_{t}))^2}
   \end{align*}
   Note that
 \begin{align*}
@@ -1847,14 +1859,12 @@ which completes the proof.
   \begin{align*}
       \sum_{t\in T(i)} (\sigma^i_{t-1}(a^i_{t^i}))^2
       & \le \frac{1}{\log\left(1 + (\sigma^i)^{-2}\right)}\\
-    &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2} (\sigma^i_{t-1}(a^i_{t}))^2\right)\\
-    & \le \frac{2}{\log\left(1 + (\sigma^i)^{-2}\right)} I([T(i)]),
+    &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2} (\sigma^i_{t-1}(a^i_{t}))^2\right).
   \end{align*}
-  where
-  \begin{equation}
-    \label{eq:I-Ti}
-    I([T(i)]) = \frac{1}{2}\sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2}(\sigma^i_{t-1}(a^i_{t}))^2\right).
-  \end{equation}
+  Therefore,
+  \[
+    \sum_{t=1}^T \sum_{i=1}^n c^i_{a^i_t} r^i_{t^i} \le \sqrt{n T}\sum_{i=1}^n \sqrt{I([T(i)])}.
+  \]
 \end{proof}
 
 
