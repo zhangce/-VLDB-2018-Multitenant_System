@@ -1125,17 +1125,126 @@ Switching to {\bf round robin} after that crossover point makes the hybrid execu
 ~
 \newpage
 
-
-
-
 \section{Experiments}\label{sec:experiments}
 
-We present experimental evaluation results of the multi-tenant GP-UCB algorithm in this section.
-We evaluate the algorithm on both real and synthetic datasets, and compare its performance with baseline approaches, including the round-robin GP-UCB algorithm discussed in Section~\ref{sec:multitenant:round-robin}, a strong baseline since it observes the same regret bound as the multi-tenant GP-UCB algorithm.
+We present experimental results of 
+\eml on both real and synthetic datasets.
+On the real dataset, we validate that
+\eml is able to provide
+better global user experiences on one
+real service we are providing to our users. 
+We then use five synthetic data sets
+to better understand the multi-tenant model
+selection subsystem inside \eml. We validate
+that each of our technical contribution 
+involved in the design of our 
+multi-tenant model selection subsystem
+results in significant speed up
+over strong baselines.
 
 \subsection{Datasets}
 
+We now describe the six datasets we used
+in the experiment and Figure~\ref{tab:datasets} summarizes these datasets.
+Each dataset used in our experiment 
+contains a set of users and machine
+learning models. For each (user, model)
+pair, there are two measurements
+associated with it, namely (1) quality
+(accuracy) and (2) cost
+(execution time).
+
+\vspace{0.5em}
+\noindent
+{\bf (Real Quality, Real Cost)} The 
+\textsc{DeepLearning} dataset is collected
+from \eml log of serving 22 users 
+for image classification tasks. Each
+user corresponds to a data set and
+\eml uses eight models for
+each data set:
+NIN, GoogLeNet, ResNet-50, AlexNet, BN-AlexNet, ResNet-18, VGG-16, and SqueezeNet.
+Each (user, model) pair is trained with
+an Adam optimizer~\cite{XX} and the
+system automatically grid search 
+the initial learning rate in
+\{0.1,0.01,.0.001,0.0001\}.
+
+\vspace{0.5em}
+Unfortunately, image classification 
+is the only \eml service so far that
+has enough amount of users
+to be used as a benchmark data set.
+To further understand the robustness
+of \eml and understand the
+behavior of each of our technical
+contribution, we use a set
+of synthetic data sets described
+as follows.
+
+\vspace{0.5em}
+\noindent
+{\bf (Real Quality, Synthetic Cost)} 
+\textsc{179Classifier}
+is a dataset with real quality 
+but synthetic cost. It contains
+121 users and 179 models obtained from
+Delgado et al.'s work~\cite{DelgadoCBA14}
+of benchmarking different machine
+learning models on UCI data sets.
+We use each dataset as a user.
+Because the original paper does not
+report the training time, we 
+generate synthetic costs from the uniform distribution $\mathcal{U}(0, 1)$.
+
+\vspace{0.5em}
+\noindent
+{\bf (Synthetic Quality, Synthetic Cost)}
+We further generate a family of 
+synthetic data sets with a 
+synthetic data generator that generates
+both synthetic quality and synthetic cost.
+
+For $N$ users and $M$ models, the synthetic
+data generator contains a generative model 
+for the quality $x_{i,j}$ of a 
+model $j\in[K]$ for a user $i\in[N]$.
+We consider the following two factors that can affect $x_{i,j}$.
+
+\noindent
+{\bf 1. User baseline quality} $b_i$: Different 
+users have different hardness associated with their tasks --- we can achieve higher accuracy on some tasks than the others.
+For a user $i$, $b_i$ then describes how difficult the corresponding task is.
+In other words, $b_i$ characterizes the inherent hardness of $i$ and the final model quality $x_{i,j}$ is modeled as fluctuation around $b_i$ (for the model $j$). We simply draw the $b_i$'s from a normal distribution $\mathcal{N}(\mu_b,\sigma_b^2)$.
+
+
+\noindent
+{\bf 2. Model quality variation} $m_j$: 
+We use $m_j$ to denote the fluctuation of model $j$
+over the baseline quality. The generative model for 
+$m_j$'s needs to capture this model correlation.
+Specifically, for each model $j$, we first assign a 
+``hidden feature'' by drawing
+from $f(j)\sim\mathcal{U}(0,1)$.
+Then, we define the covariance between 
+two models $j$ and $j'$ as 
+$\Sigma_M[j, j']=\exp \left\{-\frac{(f(j) - f(j'))^2}{\sigma_M^2} \right\}$. We sample
+for each user $i$: $
+[m_1,...,m_K] \sim \mathcal{N}(0, \Sigma_M)$.
+
+We combine the above two factors and 
+calculate the model quality as $x_{i,j} = b_i + \alpha\cdot m_j$. Each synthetic data
+set is specified by two hyperparamters:
+$\sigma_M$ and $\alpha$. $\sigma_M$ captures
+the strength of model correlation, and $\alpha$
+captures the weight of model correlation in
+the final quality. We vary these two
+parameters and generate four datasets
+($\SYN(\sigma_M, \alpha)$) shown in Figure~\ref{tab:datasets}.
+
+
 \begin{figure}
+\centering
 \small
 \begin{tabular}{c | r r | c c c}
 \hline
@@ -1153,83 +1262,30 @@ We evaluate the algorithm on both real and synthetic datasets, and compare its p
 \vspace{-1em}
 \caption{Statistics of Datasets}
 \label{tab:datasets}
-\vskip -2ex
+\vspace{-1em}
 \end{figure}
 
 \begin{figure}[t!]
 \centering
 \includegraphics[width=0.4\textwidth]{figures/main}
-\vspace{-2em}
+\vspace{-1em}
 \caption{End-to-end performance of
 \texttt{ease.ml} on the
 \textsc{DeepLearning} dataset
 compared with two strategies
 popularly used by our users 
-without \texttt{ease.ml}--- (1) most cited network first; and (2) most recently
-published network first.}
+without \texttt{ease.ml}. 
+Each user users one of
+the two heuristics:
+(1) most cited network first or
+(2) most recently published network first. 
+Different users are
+scheduled with a round-robin scheduler.}
 \label{fig:end-to-end}
-\vskip -2ex
+\vspace{-1em}
 \end{figure}
 
-
-Figure~\ref{tab:datasets} summarizes the datasets we used in our evaluation.
-We employ two real datasets ``{\bf DeepLearning}'' and ``{\bf 179Classifier}'':
-\vspace{-0.5em}
-\begin{itemize}
-\item {\bf DeepLearning} represents a workload with 22 users and 8 models that are all deep neural networks.
-It is harvested from the real scenario as was depicted in the motivating example (Section~\ref{sec:introduction}).
-We also have real statistics about costs of training these neural networks.
-\vspace{-0.5em}
-\item {\bf 179Classifier} represents a workload with 121 users and 179 models. The details of the user datasets and models can be found in~\cite{DelgadoCBA14}, where the datasets are collected from the UCI Machine Learning Repository~\cite{Lichman:2013}. We generate synthetic costs from the uniform distribution $\mathcal{U}(0, 1)$.
-\end{itemize}
-\vspace{-0.5em}
-To understand the performance of the algorithms under more diverse workloads, we further evaluate them over synthetic datasets.
-In the following, we briefly describe the synthetic data generator.
-
-\subsubsection{Synthetic Data Generation}\label{sec:experiments:datagen}
-
-We present the algorithm we used to generate synthetic data for $N$ users and $M$ models.
-Our goal is to develop a generative model for the quality $x_{i,j}$ of a model $j\in[K]$ for a user $i\in[N]$.
-We consider the following two factors that can affect $x_{i,j}$.
-
-\vspace{-0.5em}
-\begin{itemize}
-\item {\bf User baseline quality} $b_i$: Different users have different
-      hardness associated with their tasks --- we can achieve higher accuracy on some tasks than the others.
-      For a user $i$, $b_i$ then describes how difficult the corresponding task is.
-      In other words, $b_i$ characterizes the inherent hardness of $i$ and the model quality $x_{i,j}$ can be thought of as fluctuation around $b_i$ (for the model $j$).
-      We simply draw the $b_i$'s from a normal distribution $\mathcal{N}(\mu_b,\sigma_b^2)$.
-\vspace{-0.5em}
-\item {\bf Model quality variation} $m_j$: Following the previous view of treating $x_{i,j}$ as fluctuation around $b_i$, we now use $m_j$ to denote this fluctuation for the model $j$. The next question is how to generate the $m_j$'s. Since different models may exhibit similar performance on a dataset (for example, linear models may perform similarly on a dataset conforming to a linear hypothesis space), the generative model for the $m_j$'s needs to capture this model correlation.
-Therefore, rather than drawing the $m_j$'s independently, we specify their \emph{joint} distribution and draw the $m_j$'s simultaneously from the joint distribution.
-Specifically, for each model $j$, we assign a score 
-$$f(j)\sim\mathcal{U}(0,1),$$
-where $\mathcal{U}$ represents the uniform distribution as before.
-Given two models $j$ and $j'$, we define their similarity as
-$$\Sigma_M[j, j']=\exp \left\{-\frac{(f(j) - f(j'))^2}{\sigma_M^2} \right\},$$
-where $\sigma_M$ is a free parameter. We then sample
-\[
-[m_1,...,m_K] \sim \mathcal{N}(0, \Sigma_M).
-\]
-\end{itemize}
-\vspace{-0.5em}
-
-With the above discussion and notation, we can now define
-\begin{equation}\label{eq:quality:simple}
-x_{i,j} = b_i + \alpha\cdot m_j,
-\end{equation}
-where $\alpha\in(0,1]$ represents the relative impact of $m_j$ with respect to $b_i$.
-By convention we define $x_{i,j}=0$ if Equation~\ref{eq:quality:simple} leads to $x_{i,j}<0$ and define $x_{i,j}=1$ if Equation~\ref{eq:quality:simple} leads to $x_{i,j}>1$.
-We use $\SYN(\sigma_M, \alpha)$ to represent a synthetic dataset generated by using the two free parameters $\sigma_M$ and $\alpha$.
-Figure~\ref{tab:datasets} lists the four synthetic datasets used in our evaluation. %with varying values of $\sigma_M$ and $\alpha$.
-
-Note that here we have implicitly assumed that model correlation is independent of user datasets, that is, the same covariance matrix $\Sigma_M$ representing model correlation is used for all users.
-This is, however, a simplified assumption.
-It is possible that model correlation may vary across different user datasets.
-We postpone discussion of a more general data generator to Appendix~\ref{sec:appendix:synthetic} that allows for using different model covariance matrices for different users.
-
-
-\subsection{End-to-End Evaluation of ease.ml}
+\subsection{End-to-End Performance of ease.ml}
 
 Finally, we present an end-to-end evaluation of {\bf \eml} on the {\bf DeepLearning} dataset, comparing against two heuristic strategies that are popularly employed in practice by our users: (1) most cited network first ({\bf most cited}); and (2) most recently published network first ({\bf most recent}).
 These heuristics may sound amusing, however, they are reasonable from the viewpoint of scientists outside the computer science area.
@@ -1240,6 +1296,71 @@ Figure~\ref{fig:end-to-end} presents the comparison results in terms of accuracy
 We observe that {\bf \eml} can outperform the best of the two heuristics by an order of magnitude when comparing the average accuracy loss: The time spent on taking the average accuracy loss down from 0.1 to 0.02 of {\bf most cited} is about 9.8 times of (i.e., 8.8 times longer than) that of {\bf \eml}.
 The gap drops to 3.1 times when comparing the worst-case accuracy losses.
 
+
+
+\begin{figure}[t!]
+\centering
+\vspace{2em}
+\includegraphics[width=0.5\textwidth]{figures/deeplearning_nocost}\\
+\vspace{-0.5em}
+\textsc{DeepLearning}\\
+\vspace{1.5em}
+\includegraphics[width=0.5\textwidth]{figures/classifier_nocost}\\
+\vspace{-0.5em}
+\textsc{179Classifier}\\
+\vspace{1.5em}
+\includegraphics[width=0.5\textwidth]{{figures/syn_0.01_0.1_nocost}.pdf}\\
+\vspace{-0.5em}
+\textsc{SYN(0.01, 0.1)}\\
+\vspace{1.5em}
+\includegraphics[width=0.5\textwidth]{{figures/syn_0.01_1.0_nocost}.pdf}\\
+\vspace{-0.5em}
+\textsc{SYN(0.01, 1.0)}\\
+\vspace{1.5em}
+\includegraphics[width=0.5\textwidth]{{figures/syn_0.5_0.1_nocost}.pdf}\\
+\vspace{-0.5em}
+\textsc{SYN(0.5, 0.1)}\\
+\vspace{1.5em}
+\includegraphics[width=0.5\textwidth]{{figures/syn_0.5_1.0_nocost}.pdf}\\
+\vspace{-0.5em}
+\textsc{SYN(0.5, 1.0)}
+\vspace{-0.5em}
+\caption{Performance of the cost-oblivious case.}
+\label{fig:exp:cost-oblivious}
+\vspace{2em}
+\end{figure}
+
+\begin{figure}[t!]
+\centering
+\vspace{2em}
+\includegraphics[width=0.5\textwidth]{figures/deeplearning_cost}\\
+\vspace{-0.5em}
+\textsc{DeepLearning}\\
+\vspace{1.5em}
+\includegraphics[width=0.5\textwidth]{figures/classifier_cost}\\
+\vspace{-0.5em}
+\textsc{179Classifier}\\
+\vspace{1.5em}
+\includegraphics[width=0.5\textwidth]{{figures/syn_0.01_0.1_cost}.pdf}\\
+\vspace{-0.5em}
+\textsc{SYN(0.01, 0.1)}\\
+\vspace{1.5em}
+\includegraphics[width=0.5\textwidth]{{figures/syn_0.01_1.0_cost}.pdf}\\
+\vspace{-0.5em}
+\textsc{SYN(0.01, 1.0)}\\
+\vspace{1.5em}
+\includegraphics[width=0.5\textwidth]{{figures/syn_0.5_0.1_cost}.pdf}\\
+\vspace{-0.5em}
+\textsc{SYN(0.5, 0.1)}\\
+\vspace{1.5em}
+\includegraphics[width=0.5\textwidth]{{figures/syn_0.5_1.0_cost}.pdf}\\
+\vspace{-0.5em}
+\textsc{SYN(0.5, 1.0)}
+\vspace{-0.5em}
+\caption{Performance of the cost-aware case.}
+\label{fig:exp:cost-aware}
+\vspace{2em}
+\end{figure}
 
 
 \subsection{Performance of Multi-tenant GP-UCB}
@@ -1290,36 +1411,7 @@ Each row in Figure~\ref{fig:exp:cost-oblivious} represents the results of the th
 The first column shows the average accuracy loss (of the 50 runs of the same experiment) as the number of runs increases, whereas the second column shows the worst-case accuracy loss (among the 50 runs of the same experiment) as the number of runs increases.
 The third column further shows the model quality distribution (i.e., the distribution of the $x_{i,j}$'s).
 
-\begin{figure}[!htb]
-\centering
-\includegraphics[width=0.5\textwidth]{figures/deeplearning_nocost}\\
-\vspace{-0.5em}
-\textsc{DeepLearning}\\
-\vspace{0.5em}
-\includegraphics[width=0.5\textwidth]{figures/classifier_nocost}\\
-\vspace{-0.5em}
-\textsc{179Classifier}\\
-\vspace{0.5em}
-\includegraphics[width=0.5\textwidth]{{figures/syn_0.01_0.1_nocost}.pdf}\\
-\vspace{-0.5em}
-\textsc{SYN(0.01, 0.1)}\\
-\vspace{0.5em}
-\includegraphics[width=0.5\textwidth]{{figures/syn_0.01_1.0_nocost}.pdf}\\
-\vspace{-0.5em}
-\textsc{SYN(0.01, 1.0)}\\
-\vspace{0.5em}
-\includegraphics[width=0.5\textwidth]{{figures/syn_0.5_0.1_nocost}.pdf}\\
-\vspace{-0.5em}
-\textsc{SYN(0.5, 0.1)}\\
-\vspace{0.5em}
-\includegraphics[width=0.5\textwidth]{{figures/syn_0.5_1.0_nocost}.pdf}\\
-\vspace{-0.5em}
-\textsc{SYN(0.5, 1.0)}
-\vspace{-0.5em}
-\caption{Performance of the cost-oblivious case.}
-\label{fig:exp:cost-oblivious}
-\vskip -4ex
-\end{figure}
+
 
 On the two real datasets {\bf DeepLearning} and {\bf 179Classifier}, we observe that both the average and the worst-case accuracy loss of {\bf \eml} drop (often much) faster compared with {\bf random} and {\bf round robin}, whereas {\bf round robin} also outperforms {\bf random}.
 This implies that, {\bf \eml} reduces the total regret of all users faster than the other two baselines, and this performance is robust against different training and testing sets.
@@ -1346,36 +1438,7 @@ Figure~\ref{fig:exp:cost-aware} presents the performance of the three algorithms
 For the {\bf DeepLearning} dataset, we use the real cost statistics.
 For the {\bf 179Classifier} dataset and the four synthetic datasets, we generate costs randomly from the distribution $\mathcal{U}(0,1)$.
 
-\begin{figure}
-\centering
-\includegraphics[width=0.5\textwidth]{figures/deeplearning_cost}\\
-\vspace{-0.5em}
-\textsc{DeepLearning}\\
-\vspace{0.5em}
-\includegraphics[width=0.5\textwidth]{figures/classifier_cost}\\
-\vspace{-0.5em}
-\textsc{179Classifier}\\
-\vspace{0.5em}
-\includegraphics[width=0.5\textwidth]{{figures/syn_0.01_0.1_cost}.pdf}\\
-\vspace{-0.5em}
-\textsc{SYN(0.01, 0.1)}\\
-\vspace{0.5em}
-\includegraphics[width=0.5\textwidth]{{figures/syn_0.01_1.0_cost}.pdf}\\
-\vspace{-0.5em}
-\textsc{SYN(0.01, 1.0)}\\
-\vspace{0.5em}
-\includegraphics[width=0.5\textwidth]{{figures/syn_0.5_0.1_cost}.pdf}\\
-\vspace{-0.5em}
-\textsc{SYN(0.5, 0.1)}\\
-\vspace{0.5em}
-\includegraphics[width=0.5\textwidth]{{figures/syn_0.5_1.0_cost}.pdf}\\
-\vspace{-0.5em}
-\textsc{SYN(0.5, 1.0)}
-\vspace{-0.5em}
-\caption{Performance of the cost-aware case.}
-\label{fig:exp:cost-aware}
-\vskip -2ex
-\end{figure}
+
 
 The relative performance of the three algorithms is similar in the cost-aware case.
 However, one may now have the question regarding the benefits of considering costs in model selection.
