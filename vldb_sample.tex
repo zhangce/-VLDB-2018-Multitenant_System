@@ -106,11 +106,16 @@ of our users?}
 %for model selection and hyperparameter tuning.
 
 
-Resource allocation is a critical yet subtle issue in this multi-tenant scenario, as we have to balance between efficiency and fairness.
-We provide the first formalization of the problem that we call {\em multi-tenant model selection}, aiming for minimizing the total {\em regrets} of all users
+Resource allocation is a critical yet subtle issue in this multi-tenant scenario, as we 
+have to balance between efficiency and fairness.
+We first formalize the problem that we call {\em multi-tenant model selection}, 
+aiming for minimizing the total {\em regrets} of all users
 running automatic model selection tasks.
-We then develop a novel algorithm that combines multi-armed bandits with Bayesian optimization, and prove, to the best of our knowledge, the first regret bound under the multi-tenant setting.
-Finally, we report our evaluation of \eml on both synthetic data and one service we are providing to our users, namely, 
+We then develop a novel algorithm that combines multi-armed bandits with Bayesian 
+optimization, and prove an regret bound 
+under the multi-tenant setting.
+Finally, we report our evaluation of \eml on both synthetic data and one service 
+we are providing to our users, namely, 
 image classification with deep neural networks.
 Our experimental evaluation results show that our proposed solution can 
 be up to 9.8$\times$ faster to achieve the same global quality
@@ -170,7 +175,7 @@ efficient and effective way for multiple users sharing
 the same computational infrastructure running
 machine learning tasks?}
 
-\vspace{0.5em}
+\vspace{0.3em}
 \noindent
 {\bf Failed Experience 1.} Our first strategy was to provide
 all users \texttt{ssh} access to all of our machines
@@ -179,7 +184,7 @@ However, even when everyone respects the resource allocation
 protocol (which rarely happens), our users compete with 
 resources fiercely; this decentralized management strategy failed in chaos in just less than two weeks. 
 
-\vspace{0.5em}
+\vspace{0.3em}
 \noindent
 {\bf Failed Experience 2.} We then resorted to classic resource
 managers and used \texttt{Slurm} for users to submit 
@@ -209,7 +214,7 @@ networks already overfit on his dataset.
 May these resources be allocated to other users,
 they would make much better use of the computation time.
 
-\vspace{0.5em}
+\vspace{0.3em}
 Motivated by these experiences, we design
 \eml, an automatic resource manager for multi-tenant machine learning workloads.
 Compared with existing multi-tenant 
@@ -218,50 +223,61 @@ is aware of the underlying workload and is able to
 integrate knowledge about machine learning
 to guide the exploration process more effectively.
 Specifically, we formalize the resource allocation problem as what we call ``{\em multi-tenant model selection}.''
-Compared with existing systems for automatic
-model selection~\cite{XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX}, \eml is aware of the existence of
-multiple users and tries to balance and optimize for
+Compared with existing systems mainly built for the
+single-tenant case
+such as Auto-WEKA~\cite{XXX}, 
+Google Vizier~\cite{XXX}, Spark TuPAQ~\cite{XXX}, and Spearmint~\cite{XXX}, \eml is 
+designed to allow multiple users sharing the same
+infrastructure and tries to balance and optimize for
 the ``global happiness'' of all users.
 
 
 \paragraph*{Challenges}
 
-Automatic model selection is crucial for declarative machine learning services and has been studied intensively and extensively in the literature.
-However, previous studies focus on the ``single-tenant'' case rather than the multi-tenant case when multiple users compete
-for resources.
-In this paper, we start by adopting a classic 
-view point for single-tenant model selection by treating 
-it as a \emph{multi-armed bandit} problem. 
-The key idea behind a bandit problem is
-to balance between between \emph{exploration} and \emph{exploitation}. When extending existing, single-tenant 
-bandit-based solutions to the multi-tenant case, 
-we face two major challenges:
+Automatic model selection is crucial for declarative machine learning services 
+and has been studied intensively and extensively in the literature.
+To enable automatic model selection for multiple users
+competing for a shared pool of resources,
+we started from two lines of classic research:
+(1) classic single-tenant model selection with 
+\emph{multi-armed bandits}~\cite{XXX,XXX,XXX};
+and (2) classic {\em multi-task} Bayesian optimization
+and Gaussian Process~\cite{XXX,XXX,XXX} dealing
+with multiple players.
+When extending these approaches to \eml's multi-tenant case, 
+we faced two major challenges:
 
 \noindent
-{\bf (Optimization Objective)} The optimization objective for the single-tenant case is well understood: We want to find the best model for the user as soon as possible (i.e., to minimize
-  user's {\em regret} accumulated over time).
-  The first challenge is to extend this objective for
-  multiple users --- simply treating each user 
-  independently is not optimal because reducing regret for one user may increase regret for another, at any given time. 
-  Therefore, we need to first design a reasonable
-  multi-tenant objective and then design novel
-  algorithms to balance not only between
-  exploration and exploitation, but also
-  {\em fairness} and {\em global efficiency}. Moreover,
-  we hope that the algorithms we designed should have rigorous
-  theoretical guarantee similar to the single-tenant case.
+{\bf (Optimization Objective)} The single-tenant optimization objective 
+is simple: Find the best model for the user as soon as 
+possible (i.e., to minimize user's {\em regret} accumulated over time). 
+When extending this objective to multiple players,
+previous work proposes different objectives for different tasks:
+Take Swersky et al.'s recent work~\cite{XXX} for example ---
+the objectives and algorithms it designed for 
+(1) k-fold cross validation (each fold
+is a ``tenant'') and (2) using cheaper dataset 
+to help expensive dataset (each dataset is a ``tenant'')
+are different.
+Unfortunately, as we will discuss in Section~\ref{sec:relatedwork},
+both objectives are not suitable for \eml's multi-tenant
+scenario. The first challenge is to design a reasonable 
+objective for multiple users and design novel
+algorithms for such an objective. Moreover,
+we hope that the algorithms we designed should have rigorous
+theoretical guarantee similar to the single-tenant case.
   
 \noindent
-{\bf (Heterogeneous Costs and Performance)} It is
-  common practice for single-tenant model selection
-  algorithms to also consider the execution cost of
+{\bf (Heterogeneous Costs and Performance)} Most
+existing single-tenant model selection
+ algorithms are aware of the execution cost of
   a given model. This is important as models with
   vastly different costs may have similar performance 
   on a particular dataset. Therefore, any multi-tenant
   model selection algorithm we propose should also
   be aware of costs. This makes the integration and
   theoretical analysis of costs even more complicated
-  than the single-tenant case because models with 
+  because models with 
   different costs now may also have different quality for 
   different users. 
   
@@ -281,10 +297,10 @@ We summarize our contributions as follows.
 
 \noindent
 {\bf C1. (System Architecture and Problem Formulation)}
-To our best knowledge, \eml is the first system of its kind
-and our first contribution is the system design and the formulation
+To our best knowledge, \eml is one of the very first systems 
+of its kind and our first contribution is the system design and the formulation
 of the core technical problem to build \eml. 
-\eml's design goal is two fold---(1) provide an abstraction
+\eml's design goal is two fold --- (1) provide an abstraction
 to enable more effective model exploration for our users, and 
 (2) manage the shared infrastructure to enable more efficient
 resource utilization of the exploration process 
@@ -298,6 +314,7 @@ system (1) the size of the input, (2) the size of the output,
 and (3) pairs of examples the function aims to approximate.
 For example, if the user wants to train a classifier
 for RGB images into 3 classes, she would submit a job like
+\vspace{-1em}
 \[
 \texttt{Input = [256, 256, 3]
         Output = [3]}.
@@ -314,7 +331,7 @@ From infrastructure's perspective, \eml then contains an
 automatic scheduler to prioritize the execution of
 different models for different users. 
 We formalize
-this as a novel technical problem 
+this as a technical problem that 
 we call {\em multitenant model selection}.
 
 \noindent
@@ -341,8 +358,8 @@ with explicit consideration
 of the varying accuracy of the underlying 
 estimator throughout execution.
 
-From theortical perspective, we proved the
-the first known multitenant regret bound. 
+From theortical perspective, we proved a rigorous 
+multi-tenant regret bound. 
 \textcolor{red}{For multitenant model selection problem 
 with $K$ candidate models and $n$ users,
 under standard technical assumptions and standard choices of
@@ -575,7 +592,7 @@ storage and pool of computation resources.
 There are three basic operations in \eml.
 
 \noindent
-{\textbf{1. \texttt{feed}}.} The \texttt{feed} operator takes
+{\textbf{1.~\texttt{feed}}.} The \texttt{feed} operator takes
 as input a set of input/output pairs. \eml provides
 default loader for some popular Tensor types (e.g., loads
 jpeg images into Tensor[A,B,3]). To associate an output
@@ -588,7 +605,7 @@ all data will be sent and stored in the centralized
 \eml server.
 
 \noindent
-{\textbf{2. \texttt{refine}}.} The \texttt{refine} operator
+{\textbf{2.~\texttt{refine}}.} The \texttt{refine} operator
 shows all input/output pairs that the user ever \texttt{feed}'ed
 into the system and allow the user to ``turn on''
 and ``turn off'' each example. This is useful especially when
@@ -596,7 +613,7 @@ the users want to conduct data cleaning on the training set
 to get rid of noisy labels introduced by weak/distant supervision.
 
 \noindent
-{\textbf{2. \texttt{infer}}.} The \texttt{infer} operator
+{\textbf{3.~\texttt{infer}}.} The \texttt{infer} operator
 takes as input an input object and output an output object
 using the \textbf{{\em best model learned so far}}.
 
@@ -815,7 +832,7 @@ Algorithm~\ref{alg:gp-ucb} presents the details of GP-UCB.
    \FOR {$t=1,2,\cdots, T$}
    \STATE $\beta_t \rightarrow \log (Kt^2/\delta)$\\
    \STATE $a_t \rightarrow \argmax_{k\in [K]}\mu_{t-1}(k) + \sqrt{\beta_t}\sigma_{t-1}(k)$\\
-   \STATE Observe $y_t = \cA_{a_t} + \epsilon_t$\\
+   \STATE Observe $y_t = f(a_t) + \epsilon_t$\\
    \STATE $\mu_t(k) = \Sigma_t(k)^\top (\Sigma_t + \sigma^2 I)^{-1} y_{[1:t]}$\\
    \STATE $\sigma_t^2(k) = \Sigma(k, k) - \Sigma_t(k)^\top(\Sigma_t + \sigma^2 I)^{-1} \Sigma_t(k)$
    %\STATE $\cA_K = \text{arg}\max_{k \in [K]} \mu_t(k) + \sqrt{\beta_t} \sigma_{t}(k)$
@@ -865,7 +882,7 @@ Therefore, we next extend the standard GP-UCB algorithm to a cost-aware version.
 We restrict ourselves in the single-user case but introduce the notion of cost into Algorithm~\ref{alg:gp-ucb}.
 The idea is simple. We basically replace Equation~\ref{eq:gp-ucb} by the following:
 \begin{equation}\label{eq:gp-ucb:cost}
-a_t = \argmax_{k\in [K]}\{\mu_{t-1}(k) + \sqrt{\frac{\beta_t}{c_k}}\sigma_{t-1}(k)\}.
+a_t = \argmax_{k\in [K]}\left\{\mu_{t-1}(k) + \sqrt{\frac{\beta_t}{c_k}}\sigma_{t-1}(k)\right\}.
 \end{equation}
 Here $c_k$ is the cost for one evaluation of the model $k\in[K]$.
 Intuitively, this implies that we need to lower priority for expensive models even if they have high observed reward and uncertainty.
@@ -887,21 +904,24 @@ Intuitively, this implies that we need to lower priority for expensive models ev
 
 \begin{theorem}
   \label{thm:cost}
-  Given $\delta\in (0,1)$ and set $\beta_t = 2c^\ast \log\left[\frac{\pi^2 K t^}{6\delta}\right]$ with $c^\ast = \max_{k\in [K]}\{c_k\}$.
-  Then the
-  simple regret of the single tenant, cost-aware GP-UCB is bounded above by
-  $\sqrt{I(T)/(\sum_{t=1}^Tc_{a_t})}$ with probability at
-  least $1-\delta$, i.e.,
+  Given $\delta\in (0,1)$ and set $\beta_t = 2c^\ast \log\left[\frac{\pi^2 K t^2}{6\delta}\right]$ with $c^\ast = \max_{k\in [K]}\{c_k\}$. Then the total regret of the single tenant, cost-aware GP-UCB is bounded above by
   \[
-    \bP\left(\min_{t\in [T]}r_t \le \sqrt{\frac{I(T)}{\sum_{t=1}^T
-        c_{a_t}}}\right) \ge 1-\delta,
-\]
+  \sqrt{T\cdot I(T)}
+  \]
+%   Then the
+%   simple regret of the single 
+%   $\sqrt{I(T)/(\sum_{t=1}^Tc_{a_t})}$ with probability at
+%   least $1-\delta$, i.e.,
+%   \[
+%     \bP\left(\min_{t\in [T]}r_t \le \sqrt{\frac{I(T)}{\sum_{t=1}^T
+%         c_{a_t}}}\right) \ge 1-\delta,
+% \]
 where 
 \[
-I(T) = \frac{4\beta_T}{\log(1 + \sigma^{-2})}\sum_{t=1}^T \log(1+\sigma^{-2}\sigma^2_{t-1}(a_t))
+I(T) = \frac{4c^\ast \beta_T}{\log(1 + \sigma^{-2})}\sum_{t=1}^T \log(1+\sigma^{-2}\sigma^2_{t-1}(a_t))
 \]
 \end{theorem}
-
+Note that $I(T)$ is bounded by $XXX$ \cite{}. This theorem suggests that the regret at iteration $t$ (the minimal regret up to iteration $t$) converges to $0$ with respect to the running time $\sum_{t=1}^T c_{a_t}$ with high probability. 
 
 
 \newpage
@@ -953,9 +973,19 @@ I(T) = \frac{4\beta_T}{\log(1 + \sigma^{-2})}\sum_{t=1}^T \log(1+\sigma^{-2}\sig
 
 
 \subsection{Multi-tenant GP-UCB}
+When there are multiple tenants are available, we can only pick one tenant to run at each round. Our goal is to minimize the cummunative regret 
+\[
+define the regret over here.
+\]
+Note that this regreat is not the sum of regrets of all tenants, since at any time point the regret is computed from current regrets from all tenents. It means that if we do not pick tenant $i$ at round $t$, then its regeat at round $t-1$ will be undertaken at round $t$ again.
+
+The most straightforward idea is applying the FIFS principle: we serve each tenant until find out its optimal algorithm before move to the next one. Unfortunately, it gives a very terrible cummunative regret:
+\[
+xx
+\]
 
 \subsubsection{Round Robin GP-UCB}
-
+A simple idea to avoid the embarrasement is to apply the round robin priciple, that is, each tenant will be selected alternatively. The native approach admits the following cummunative regret.
 
 
 \paragraph*{Theoretical Analysis}
@@ -967,18 +997,21 @@ I(T) = \frac{4\beta_T}{\log(1 + \sigma^{-2})}\sum_{t=1}^T \log(1+\sigma^{-2}\sig
   Given $\delta\in (0,1)$ and set $\beta_t^i = 2c^\ast \log\left[\frac{\pi^2 n K^\ast t^2}{6\delta}\right]$ with $c^\ast = \max_{i\in [n], k\in [K^i]}\{c^i_k\}$ and $K^\ast = \max_{i\in [n]}\{K^i\}$. Then the
   total regret of Round Robin GP-UCB is bounded above by
   \[
-     \sqrt{n T}\sum_{i=1}^n \sqrt{I([T(i)])}
+     \sqrt{n T}\sum_{i=1}^n \sqrt{I_i([T(i)])}
   \]
   with probability at least $1-\delta$,
   where
   \begin{align*}
-    I([T(i)]) & = 4 \sqrt{\frac{c^\ast \beta^\ast}{\log(1 + (\sigma^\ast)^{-2})}}\\
+    I_i([T(i)]) & = \frac{4 c^\ast \beta^\ast}{\log(1 + (\sigma^\ast)^{-2})}\\
     &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2}(\sigma^i_{t-1}(a^i_{t}))^2\right),
   \end{align*}
   with $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$ and $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$.
 \end{theorem}
-
-
+Key observations include that
+\begin{itemize}
+\item When the runing time goes infinity, the regret will converge to zero;
+\item If assume the cost for all algorithms to be identical, then the regret at time $t$ decreases to $0$ with a rate $\frac{n^1.5}{T^0.5}$.
+\end{itemize}
 
 \newpage
 
@@ -1073,20 +1106,20 @@ We next discuss this by-product in more detail by presenting a theoretical analy
   Given $\delta\in (0,1)$ and set $\beta_t^i = 2c^\ast \log\left[\frac{\pi^2 n K^\ast t^}{6\delta}\right]$ with $c^\ast = \max_{i\in [n], k\in [K^i]}\{c^i_k\}$ and $K^\ast = \max_{i\in [n]}\{K^i\}$. Then the
   total regret of Multi-tenant GP-UCB is bounded above by
   \[
-    n \sqrt{T}\sqrt{\sum_{i=1}^n I([T(i)])}
+    n \sqrt{T}\sqrt{\sum_{i=1}^n I_i([T(i)])}
   \]
   with probability at least $1-\delta$,
   where
   \begin{align*}
-    I([T(i)]) & = 2 \sqrt{\frac{c^\ast \beta_T}{\log(1 + (\sigma^\ast)^{-2})}}\\
+    I_i([T(i)]) & =  \frac{4c^\ast \beta^\ast}{\log(1 + (\sigma^\ast)^{-2})}\\
     &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2}(\sigma^i_{t-1}(a^i_{t}))^2\right),
   \end{align*}
-  with $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$.
+  with $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$  and $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$.
 \end{theorem}
 
-It is observed that $I([T(i)])$ is proportional to the information gain for each user $i$. In particular, if the kernel function or covariance matrix is linear (see
-  Theorem 5 in \cite{srinivas2009gaussian}), then for each $i\in [n]$, the
-  order of $I([T(i)])$ is at most $\log(|T(i)|)$. Since
+It is observed that $I_i([T(i)])$ is proportional to the information gain for each user $i$. In particular, if the kernel function or covariance matrix is linear (see
+  Theorem 5 in \cite{SrinivasKKS10}), then for each $i\in [n]$, the
+  order of $I_i([T(i)])$ is at most $\log(|T(i)|)$. Since
   \[
     \sum_{i=1}^n \log(|T(i)|) = \log \prod_{i=1}^n |T(i)|,
     \]
@@ -1102,7 +1135,11 @@ It is observed that $I([T(i)])$ is proportional to the information gain for each
   \[
  n^{3/2}\sqrt{T \log\left(\frac{T}{n}\right)}.
   \]
-For other two common used kernel functions: the Squared Exponential kernel and the Mat\'{e}rn kernel, we can also get a bound, which is sublinear in $T$. We refer to Section 5.2 in \cite{srinivas2009gaussian} for details.
+For other two common used kernel functions: the Squared Exponential kernel and the Mat\'{e}rn kernel, we can also get a bound, which is sublinear in $T$. We refer to Section 5.2 in \cite{SrinivasKKS10} for details.
+
+\[
+Comparison to RR.
+\]
 
 \subsection{Discussion and A Hybrid Approach}
 
@@ -1122,8 +1159,6 @@ As we have just discussed, this hybrid approach observes the same regret bound a
 
 
 
-\newpage
-~
 \newpage
 
 \section{Experiments}\label{sec:experiments}
@@ -1719,42 +1754,94 @@ multiple devices in the resource pool.
 
 \section{Related Work}\label{sec:relatedwork}
 
-From the system perspective, the most
-similar system is designed by Sparks et al.~\cite{SparksTHFJK15} that integrates automatic model
-selection into Spark ML. 
+From the system perspective, \eml is closely related to
+AutoML systems that recently built by both the database and machine learning community.
+Examples include Spark TuPAQ~\cite{XXX}, Auto-WEKA~\cite{XXX}, 
+Google Vizier~\cite{XXX}, Spearmint~\cite{XXX}, GPyOpt~\cite{XXX},
+Auto scikit-learn~\cite{XXX} et al. Most of these systems
+are build upon state-of-the-art automatic model selection and 
+hyper-parameter tuning algorithms such as GP-UCB~\cite{SrinivasKKS10},
+GP-PI~\cite{Kushner1964}, GP-EI~\cite{SnoekLA12}, and 
+Thompson sampling~\cite{ChapelleL11,KaufmannKM12,Scott:2010}.
+See a recent survey by Luo~\cite{Luo16} for an overview of this area.
+Compared with these systems, \eml is an AutoML system based on GP-UCB, however, focus
+on the multi-tenant case when multiple users share the same
+infrastructure running machine learning workload. To our best knowledge,
+this is different from all existing model selection systems.
 
-, though the authors only considered the single-tenant model selection problem.
+\vspace{-1em}
+\paragraph*{Multi-task Model Selection and Bayesian Optimization} 
+The most relevant line of research is {\em multi-task model selection}
+optimized for multiple concurrent single-tenant model selection tasks.
+\eml contains a new multi-task model selection algorithm. 
 
-\paragraph*{Automatic Model Selection}
+Compared with previous work, \eml focuses
+on a different multi-tenant setting. For example, Swersky et al.~\cite{XXX}
+proposed different algorithms for two scenarios: (1) For
+k-fold cross validation, it takes advantage of the correlation between
+folds by skipping evaluating certain fold for the same model --- this
+is different from our objective (considering when
+two users are strongly correlated, Swersky et al. try to 
+skip evaluating one user because it does not provide much new 
+information, while \eml needs to balance between two users); (2)
+When there exists a cheaper classifier and an expensive classifier, Swersky et al.
+try to query the cheaper classifier to get information
+for the expensive one --- this is different from our objective
+as their algorithm requires a ``primary user'' while in \eml
+all users need to be treated equally. Similar observations
+hold for previous work by Bardenet et al.~\cite{XXX} and Hutter et al.~\cite{XXX}.
+We design \eml to optimize for an objective
+that we generalized from our experience in serving our collaborators
+and design a novel algorithm for this specific objective. 
 
-The problem of automatic model selection and hyper-parameter tuning has been studied extensively. (See a recent survey by Luo~\cite{Luo16} for an overview of this area.)
-Nonetheless, we are unaware of any work that considers the model selection problem in a multi-tenant setting.
-The multi-tenancy circumstance is quite natural when hosting a shared machine learning infrastructure.
+\vspace{-1em}
+\paragraph*{Multi-task Gaussian Process}
+There have been work in extending Gaussian Process to 
+multi-task (user) case. One example technical is {\em intrinsic model
+of coregionalization}~\cite{XXX} that decomposes
+a kernel with Kronecker product. Most 
+Multi-task model selection algorithms uses some version of
+multi-task Gaussian Process as the underlying estimator.
+\eml uses a simple multi-task Gaussian Process estimator in which we
+do not consider the dependencies between users. It is interesting
+future direction to further integrate user correlations 
+into \eml after we has a better understanding of the underlying
+distribution among users.
 
-Modeling the model selection problem 
-as a multi-armed bandit problem is not new. 
-In fact, it is one of the most popular
-viewpoints~\cite{aaa}. 
+Another Gaussian Process variant with multiple tasks involved
+is the study of parallel Gaussian Process in which multiple
+proposes are being evaluated instead of just one~\cite{XXX}.
+The key here is to balance the diversity of multiple samples,
+and it is future work to integrate similar techniques
+to extend \eml's resource model from the single-device to multi-device.
 
-Our idea of viewing model selection as a multi-armed bandit problem is inspired by the recent work from Sparks et al.~\cite{SparksTHFJK15}, though the authors only considered the single-tenant model selection problem.
-Historically, the study of the bandit problem can date back to the time of World War II~\cite{Robbins:1952}.
-In the seminal paper by Lai and Robbins~\cite{Lai:1985}, the authors first introduced a class of algorithms based on UCBs that possess the fastest rate of convergence.
-Agrawal~\cite{Agrawal1995} and Auer~\cite{Auer02,Auer:2002} further proposed more tractable versions of the UCB algorithm with similar regret bounds.
-The GP-UCB algorithm comes from a relatively recent development by Srinivas et al.~\cite{SrinivasKKS10} where they introduced Bayesian optimization into the UCB algorithm.
-Compared with other solutions to the bandit problem that are based on heuristic metrics such as probability of improvement (PI)~\cite{Kushner1964}, expected improvement (EI)~\cite{SnoekLA12}, or Thompson sampling~\cite{ChapelleL11,KaufmannKM12,Scott:2010},
-the UCB algorithms are favourable due to their theoretically provable regret bounds.
-However, none of them has ever considered the aspect of cost in terms of playing arms or model selection, which is essential in the multi-tenancy setting.
+\vspace{-1em}
+\paragraph*{Multi-tenant Clouds and Resource Management}
+The focus of multi-tenancy on shared infrastructure is not new ---
+in fact, it has been one of the classic topic intensively
+studied by the database community. Examples include
+sharing buffer pool~\cite{XXX} and CPUs~\cite{XXX},
+for multi-tenant relational ``database-as-a-service''
+and sharing semi-structured data sources~\cite{XXX}.
+\eml is inspired by these work but focuses on
+multi-tenancy for machine learning.
 
-\paragraph*{Multitenant Clouds and Resource Management}
-
-\paragraph*{Declarative Machine Learning Clouds}
-
-\paragraph*{Multi-armed Bandits for Systems}
-
-\paragraph*{Learning Curve Estimation}
-
-\paragraph*{Automatic Hyperparameter Tuning}
-
+\vspace{-1em}
+\paragraph*{Declarative Machine Learning Clouds} \eml is
+inspired by the intensive, recent study of declarativeness
+and usability of machine learning systems by the database 
+community~\cite{XXX,XXX,XXX,XXX,XXX,XXX}. In \eml we 
+study how to integrate automatic model selection into
+a high-level abstraction, and hope our result can be integrated
+into other systems in the future.
+Another related system trend is so called ``machine learning
+cloud''. Examples include Azure Machine Learning Studio~\cite{XXX}
+and Amazon Machine Learning~\cite{XXX}. These services
+provide a high-level interface and often support automatic model selection
+and hyperparamter tuning. \eml is designed with the goal to
+lower the operating cost for these services 
+by allowing multiple-users sharing the same underlying 
+infrastructure more efficiently.
 
 
 \section{Conclusion}\label{sec:conclusion}
@@ -1977,7 +2064,7 @@ equally hard, why not round-robin)
 \section{Proofs}
 \begin{lemma}
   \label{lem:5.1}
-  Fix $\delta \in (0,1)$ and let $\beta_t $ be a solution of \eqref{eq:beta}. Then
+  Fix $\delta \in (0,1)$ and let $\beta_t = 2c^\ast \log\left[\frac{\pi^2 K t^}{6\delta}\right]$. Then
   \[
     |f(k) - \mu_{t-1}(k) | \le \sqrt{\frac{\beta_t}{c_k}}\sigma_{t-1}(k),\
     \forall 2\le t\le T, k\in [K],
@@ -2008,6 +2095,7 @@ equally hard, why not round-robin)
   e^{-\frac{\beta_t}{2c_k}} \ge  1 - \delta$.
 \end{proof}
 
+\vspace{2em}
 \paragraph*{Proof of Theorem \ref{thm:cost}}
 \begin{proof}
   By the definition of $a_t$ in our algorithm, we have
@@ -2044,7 +2132,7 @@ equally hard, why not round-robin)
 which completes the proof.
 \end{proof}
 
-
+\vspace{2em}
 \paragraph*{Proof of Theorem \ref{thm:rr}}
 \begin{proof}
    Fix $t\ge 2$ and $i\in [n]$. Conditioned on the observations of previous $t-1$ rounds, we
@@ -2065,12 +2153,13 @@ which completes the proof.
   with probability at least $1- \sum_{t=1}^T\sum_{i=1}^n\sum_{k=1}^{K^i}
   e^{-\frac{\beta^i_t}{2c^i_k}} \ge  1 - \delta$.
 
-  For each user $i\in [n]$, applying Lemma \ref{lem:5.1} yields
-  \[
-    r^i_{t^i} = f^i(a^{i,\ast}) - f^i(a^i_{t_i})\le 2
-    \sqrt{\frac{\beta^i_{t^i}}{c^i_{a^i_{t}}}}\sigma^i_{t-1}(a^i_{t^i}),\ \forall
-    i\in [n], t\in [T],
-  \]
+  For each user $i\in [n]$, we have
+  \begin{align*}
+    r^i_{t^i} & = f^i(a^{i,\ast}) - f^i(a^i_{t^i})\\
+    & \le \sqrt{\frac{\beta^i_{t^i}}{c^i_{a^i_{t}}}}\sigma^i_{t-1}(a^i_{t^i}) +\mu^i_{t-1}(a^i_{t^i}) - f^i(a^i_{t_i})\\
+    & \le 2
+    \sqrt{\frac{\beta^i_{t^i}}{c^i_{a^i_{t}}}}\sigma^i_{t-1}(a^i_{t^i}),
+  \end{align*}
    and thus by algorithm,
   \begin{align*}
     \sum_{t=1}^T \sum_{i=1}^n c^i_{a^i_t} r^i_{t^i}
@@ -2093,19 +2182,17 @@ which completes the proof.
   \end{align*}
   and so
   \begin{align*}
-      \sum_{t\in T(i)} (\sigma^i_{t-1}(a^i_{t^i}))^2
+      \sum_{t\in T(i)} (\sigma^i_{t-1}(a^i_{t}))^2
       & \le \frac{1}{\log\left(1 + (\sigma^i)^{-2}\right)}\\
     &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2} (\sigma^i_{t-1}(a^i_{t}))^2\right).
   \end{align*}
   Therefore,
   \[
-    \sum_{t=1}^T \sum_{i=1}^n c^i_{a^i_t} r^i_{t^i} \le \sqrt{n T}\sum_{i=1}^n \sqrt{I([T(i)])}.
+    \sum_{t=1}^T \sum_{i=1}^n c^i_{a^i_t} r^i_{t^i} \le \sqrt{n T}\sum_{i=1}^n \sqrt{I_i([T(i)])}.
   \]
 \end{proof}
 
-
-
-
+\vspace{2em}
 \paragraph*{Proof of Theorem \ref{thm:multi-cost}}
 \begin{proof}
   Fix $t\ge 2$ and $i\in [n]$. Conditioned on the observations of previous $t-1$ rounds, we
@@ -2121,7 +2208,7 @@ which completes the proof.
   \end{align*}
   Applying the union bound, we obtain for any $2\le t\le T, i\in [n]$ and $k\in [K^i]$,
   \[
-    |f(k) - \mu_{t-1}(k) | \le \sqrt{\frac{\beta_t}{c_k}}\sigma_{t-1}(k),
+    |f^i(k) - \mu^i_{t-1}(k) | \le \sqrt{\frac{\beta_t^i}{c^i_k}}\sigma^i_{t-1}(k),
   \]
   with probability at least $1- \sum_{t=1}^T\sum_{i=1}^n\sum_{k=1}^{K^i}
   e^{-\frac{\beta^i_t}{2c^i_k}} \ge  1 - \delta$.
@@ -2161,19 +2248,16 @@ which completes the proof.
   \begin{align*}
     \sum_{t=1}^T (\sigma^{I_t}_{t-1}(a^{I_t}_t))^2
     & \le \sum_{i=1}^n \frac{1}{\log\left(1 + (\sigma^i)^{-2}\right)}\\
-    &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2} (\sigma^i_{t-1}(a^i_{t}))^2\right)\\
-    & \le \sum_{i=1}^n \frac{1}{\log\left(1 + (\sigma^i)^{-2}\right)} I([T(i)]),
+    &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2} (\sigma^i_{t-1}(a^i_{t}))^2\right).
   \end{align*}
   Finally, we obtain the bound for the total regret:
   \begin{align*}
-    \sum_{t=1}^T \sum_{i=1}^n c^i_{a^i_t} r^i_{t^i}
-    & \le 2n \sqrt{c^\ast \beta^\ast T} \sqrt{\sum_{i=1}^n \frac{1}{\log\left(1 + (\sigma^i)^{-2}\right)} I([T(i)])}\\
-    & \le C_2 n \sqrt{T} \sqrt{\sum_{i=1}^n I([T(i)])},
+    & \sum_{t=1}^T \sum_{i=1}^n c^i_{a^i_t} r^i_{t^i}\\
+     \le \ & 2n \sqrt{c^\ast \beta^\ast T}\\
+    & \cdot \sqrt{\sum_{i=1}^n \frac{1}{\log\left(1 + (\sigma^i)^{-2}\right)} \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2} (\sigma^i_{t-1}(a^i_{t}))^2\right)}\\
+    =\ & n \sqrt{T} \sqrt{\sum_{i=1}^n I_i([T(i)])},
   \end{align*}
-  where
-  \[
-    C_2 = 2 \sqrt{\frac{c^\ast \beta^\ast}{\log(1 + (\sigma^\ast)^{-2})}}.
-  \]
+ which completes the proof.
 \end{proof}
 
 
