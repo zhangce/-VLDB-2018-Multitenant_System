@@ -908,14 +908,8 @@ be the set of models \eml tried for user $i$
 up to time $t$. We define the \eml multi-tenant
 regret as:
 \[
-R_T' = \sum_i \sum_t x^{(i)}_{*,t} - \max_{a \in \cA_t^{(i)}} x_{a, t}
+R'_T = \sum_{t} \mathbb{E}\left(c^{I_t}_{a_t^{I_t}}\sum_{i} \left(\mu^{(i)}_* -  \max_{a\in \mathcal{A}_t^{(i)}}x_{a, t}\right)\right)
 \]
-{\color{red}
-\[
-R_T' = \sum_i \sum_t \left(\mu^{(i)}_{*} - \mathbb{E}\max_{a \in \cA_t^{(i)}} x_{a, t}\right)
-\]
-where $\mu^(i)_*$ indicates the 
-}
 
 
 Given that only one user is scheduled at any time step $t$, how should we define the instantaneous regret for a user that is not scheduled at $t$?
