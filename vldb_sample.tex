@@ -75,11 +75,14 @@
 %The Multi-tenant Case}
 
 
-\title{Ease.ml: Towards Multi-tenant Machine Learning Clouds}
+\title{Ease.ml: Towards Multi-tenant Resource Sharing for \\
+Machine Learning Workloads}
 %: \\
 %Towards ``Machine Learning as a Service''}
 
 \author{
+\vspace{-1.1em}
+~\\
 Tian Li$^\dagger$~~~~~Ji Liu$^\ddagger$~~~~~Jie Zhong$^\ddagger$~~~~~Wentao Wu$^*$~~~~~Ce Zhang$^\dagger$\\
 \small $^\dagger$ETH Zurich, Switzerland\\
 \small litian@ethz.ch~~~~~ce.zhang@inf.ethz.ch\\
@@ -124,6 +127,7 @@ two popular heuristics used by our users before \eml.
 
 \end{abstract} 
 
+\vspace{-1em}
 \section{Introduction}\label{sec:introduction}
 
 The past decade have witnessed the increasingly 
@@ -135,8 +139,7 @@ background on the part of our users. As a result, how to make
 machine learning techniques more {\em accessible} and
 {\em usable} to non-computer science users has become
 a research topic that has attracted intensive interest
-from the database~\cite{XXX,XXX,XXX,XXX,XXX}
-and the machine learning community~\cite{XXX,XXX,XXX,XXX,XXX}.
+from the database community~\cite{Tamagnini2017,Varma2017,Krishnan2017,Binnig2016,Bailis2017}.
 
 \paragraph*{Motivating Example} At ETH Zurich,
 we as a research group provide ``data science
@@ -145,8 +148,7 @@ These users provide
 us their data sets and the tasks they 
 want to perform with machine learning. We host these data sets on our machines
 for our users to run their machine learning
-jobs (e.g.,
-TensorFlow~\cite{XXX} and Keras~\cite{XXX}).
+jobs.
 Although we also have students serving as ``consultants''
 to answer user questions, it is still our
 users who run the machine learning systems
@@ -155,13 +157,13 @@ contains 29 TITAN X GPUs and 100 TB storage
 shared by more than ten research groups
 from areas that include astrophysics,
 biology, social sciences, meteorology, 
-material science, and the university hospital.
+and material science.
 In this paper, we ask this question: {\em What is an
 efficient and effective way to enable multiple users sharing 
 the same computational infrastructure to run
 machine learning tasks?}
 
-\vspace{0.3em}
+\vspace{0.1em}
 \noindent
 {\bf Failed Experience 1.} Our first strategy was to provide
 all users with \texttt{ssh} access to all our machines
@@ -170,7 +172,7 @@ However, even when everyone respects the resource allocation
 protocol (which rarely happens), our users compete for 
 resources fiercely. This decentralized management strategy fell into chaos and failed in less than two weeks. 
 
-\vspace{0.3em}
+\vspace{0.1em}
 \noindent
 {\bf Failed Experience 2.} We then resorted to classic resource
 managers and used \texttt{Slurm} for users to submit 
@@ -195,19 +197,19 @@ networks already overfit on his data set.
 If these resources were allocated to other users,
 it would result in much better use of the computation time.
 
-\vspace{0.3em}
+\vspace{0.1em}
 Motivated by these experiences, we designed
 \eml, a declarative machine learning service platform we built for our local collaborators at ETH Zurich
 that employs an automatic resource manager for multi-tenant machine learning workloads.
 Compared to existing multi-tenant 
-resource managers~\cite{XXX,XXX,XXX,XXX,XXX}, \eml
+resource managers~\cite{DavidShue2012,Krebs2014,JonathanMace2015}, \eml
 is aware of the underlying workload and is able to
 integrate knowledge about machine learning
 to guide the exploration process more effectively.
 Compared to existing systems mainly built for the
 single-tenant case
-such as Auto-WEKA~\cite{XXX}, 
-Google Vizier~\cite{XXX}, Spark TuPAQ~\cite{XXX}, and Spearmint~\cite{XXX}, \eml allows multiple users to share the same
+such as Auto-WEKA~\cite{Thornton2013,Kotthoff2017}, 
+Google Vizier~\cite{Golovin2017}, Spark TuPAQ~\cite{Sparks2015}, and Spearmint~\cite{Snoek2012}, \eml allows multiple users to share the same
 infrastructure and then tries to balance and optimize their use of it for
 the ``global satisfaction'' of all users.
 
@@ -220,9 +222,9 @@ To enable automatic model selection for multiple users
 competing for a shared pool of resources,
 we started from two previous approaches:
 (1) single-tenant model selection using 
-\emph{multi-armed bandits}~\cite{XXX,XXX,XXX};
+\emph{multi-armed bandits}~\cite{Feurer2015,Snoek2012,Sparks2015,Golovin2017,Kotthoff2017};
 and (2) {\em multi-task} the Bayesian optimization
-and Gaussian Process~\cite{XXX,XXX,XXX}.
+and Gaussian Process~\cite{Hutter2011,Bardenet2013,Swersky2013}.
 When we tried to extend these methods to the particular multi-tenant scenario \eml was designed for,
 we faced two challenges.
 
@@ -231,7 +233,7 @@ we faced two challenges.
 The optimization objective of single-tenant model selection is clear: Find the best model for the user as soon as 
 possible (i.e., minimize the user's {\em regret} accumulated over time).
 However, the optimization objective becomes messy once we turn to the multi-tenant case.
-Previous work has proposed different objectives~\cite{XXX}.
+Previous work has proposed different objectives~\cite{Swersky2013}.
 None of these fit \eml's application scenario (see Section~\ref{sec:relatedwork}).
 Therefore, our first challenge was to design an appropriate objective for \eml that captures the intuitive yet vague notion of ``global satisfaction'' for all users and then design 
 an algorithm for this new objective.
@@ -246,7 +248,7 @@ existing single-tenant model selection
   on a particular data set. Therefore, any multi-tenant
   model selection algorithm that is useful in practice should also
   be aware of costs.
-  Previous work on cost-aware model-selection algorithms resorts to various heuristics to integrate the cost~\cite{XXX}.
+  Previous work on cost-aware model-selection resorts to various heuristics to integrate the cost~\cite{Snoek2012}.
   Moreover, theoretical analysis of many state-of-the-art algorithms is usually done in a ``cost-oblivious'' setting where costs are neglected.
   The question of how to integrate costs into model-selection algorithms while retaining the desirable theoretical properties remains open.
   Our second challenge was to develop cost-aware multi-tenant algorithms with theoretical guarantees.
@@ -282,7 +284,7 @@ our users' applications can be built in this way.
 
 The core of the \eml architecture is an automatic scheduler that prioritizes the execution of different models for different users.
 We further formalize the scheduling problem as what we call {\em multi-tenant model selection}.
-Although similar problems have been explored in previous work~\cite{XXX}, to the best of our knowledge we are the first to formulate the multi-tenant model selection problem in the context of a multi-tenant machine learning platform.
+Although similar problems have been explored in previous work~\cite{Swersky2013}, to the best of our knowledge we are the first to formulate the multi-tenant model selection problem in the context of a multi-tenant machine learning platform.
 As a consequence, we have come up with a new optimization objective based on real user requirements in practice.
 
 
@@ -300,7 +302,7 @@ standard GP-UCB algorithm for selecting the best model of
 each user. For the second ``user-picking'' phase, we developed a simple but novel criterion to decide on the best user to be scheduled next.
 
 We studied the theoretical properties of the proposed algorithm as well as a variant that replaces the criterion in the ``user-picking'' phase using a round-robin strategy.
-In summary, we proved rigorous regret bounds for both algorithms: \textcolor{red}{For the multi-tenant model selection problem 
+In summary, we proved rigorous regret bounds for both algorithms: For the multi-tenant model selection problem 
 with $K$ models and $n$ users, 
 the total regret $R_T$ of all users is bounded by 
 $
@@ -310,7 +312,6 @@ where $T$ is the total execution time
 and $C$ is a constant.
 This is in line with the best-known bound for the standard GP-UCB algorithm.
 It implies that both algorithms are \emph{regret-free}, i.e., $R_T/T \rightarrow 0$, which is a desired property for any model-selection algorithm in practice.
-}
 
 We further analyzed the strength and weakness of both algorithms and designed a hybrid algorithm that explicitly considers
 the varying accuracy of the underlying estimator employed by the ``user-picking'' criterion.
@@ -326,9 +327,9 @@ When a user submits a job with the schema
 that maps a three-dimensional tensor to
 a vector, \eml automatically matches the job with eight
 different neural network architectures, including
-NIN~\cite{XXX}, GoogLeNet~\cite{XXX}, ResNet-50~\cite{XXX}, AlexNet~\cite{XXX},
-BN-AlexNet~\cite{XXX}, ResNet-18~\cite{XXX}, VGG-16~\cite{XXX},
-and SqueezeNet~\cite{XXX}. We collect twenty 
+NIN, GoogLeNet, ResNet-50, AlexNet,
+BN-AlexNet, ResNet-18, VGG-16,
+and SqueezeNet. We collect twenty 
 data sets (users) and compare
 \eml's scheduler to the popular heuristics 
 used by our users (prior to the availability of \eml), as well as variants of our algorithm that leverage classic scheduling policies in the ``user-picking'' phase such as round robin or random scheduling.
@@ -352,8 +353,8 @@ our experience in supporting our users, but
 the applicability goes beyond \eml --- we hope
 this framework can also help other, much larger, service providers
 of machine leanring infrastructures such as 
-Azure Machine Learning Studio~\cite{XXX}
-and Amazon Machine Learning~\cite{XXX}
+Azure Machine Learning Studio
+and Amazon Machine Learning
 to reduce their operating
 cost.
 
@@ -401,7 +402,7 @@ to enable more effective model exploration for our users, and
 (2) manage the shared infrastructure to enable more efficient
 resource utilization during the exploration process 
 for {\em all} instead of {\em one} of our users.
-A similar, but vague, objective for \eml was published as a short vision paper~\cite{HILDA}. This paper tackles the first
+A similar, but vague, objective for \eml was published as a short vision paper~\cite{Zhang2017a}. This paper tackles the first
 concrete technical problem we faced in realizing this
 vision.
 
@@ -570,7 +571,7 @@ For image-shaped templates (e.g., Tensor[A,B,3]),
 most of the consistent deep-learning models are designed for
 image data. However, much of the data from our users, although
 they have shapes like an image, have a much larger dynamic
-range than an image. For one astrophysics application~\cite{MNRAS}
+range than an image. For one astrophysics application~\cite{Schawinski2017}
 and one proteomics application, the dynamic range could
 vary by more than ten orders of magnitude. In this case,
 simply treating the input as an image results in unusable 
@@ -587,7 +588,7 @@ candidate model.
 Given a set of candidate models, \eml decides on an order of
 execution. The current execution strategy of \eml is to 
 use {\em all} its 29 GPUs to train a single 
-model using CNTK. We made this design decision 
+model. We made this design decision 
 because we were able to achieve near-linear scale-up
 of training at this scale. (in the near 
 future, \eml will need to allow a more flexible resource 
@@ -783,7 +784,7 @@ In practice, a difference choice of $\theta$ has an impact on the convergence ra
 \vspace{-0.75em}
 \paragraph*{Theoretical Analysis}
 
-The well-known cumulative regret of the UCB algorithm~\cite{XXX} is $R_T \leq C\cdot K\log T$,
+The well-known cumulative regret of the UCB algorithm~\cite{DBLP:journals/ftml/BubeckC12} is $R_T \leq C\cdot K\log T$,
 where $C$ is some constant depending on the arm distribution. It is known to be one of the best upper bounds for the multi-bandit problem. This bound has a minor dependence on $T$ but depends seriously on the distribution of all arms and the number of arms. This is mainly because the UCB algorithm does not consider dependence between arms. In order to make $R_T/T$ converge to zero, we have to try at least $K$ times. So the UCB algorithm must play all arms once or twice in the initial step. To utilize the dependence among arms, previous work has extended the UCB algorithm with the Gaussian Process, where the dependence among arms can be measured by a Kernel matrix. The GP-UCB algorithm can achieve the regret
 \[
 R_T \leq C\cdot \sqrt{T\log T}
@@ -854,25 +855,23 @@ In the same spirit, this theorem also suggests that the regret at iteration $t$ 
 
 
 
-
-
 \section{Multi-tenant Model Selection}\label{sec:multitenant}
 
-We now present the multi-tenant model selection
+We now present the multi-tenant model-selection
 algorithm in \eml. This section is organized as follows.
 
 \noindent
 $\bullet$ We formulate the problem 
 by extending the classic single-tenant regret
 into a multi-tenant, cost-aware form. We then 
-discuss the difference compared with
-one most similar formulation~\cite{XXX}.
+discuss the difference compared to
+one very similar formulation~\cite{Swersky2013}.
 
 \noindent
 $\bullet$
 We start from a very simple strategy that we call
 \rr. \rr schedules
-each user in a round robin way while each user
+each user in a round-robin way while each user
 uses their own single-tenant GP-UCB
 during their allocated time slices. We proved 
 a regret bound for this simple strategy.
@@ -882,17 +881,17 @@ $\bullet$
 We then present an improved algorithm that we
 call \greedy. \greedy schedules
 each user by maximizing their potential contribution
-to the global objective. This is a novel algorithm
-and we also prove a regret bound for this strategy.
+to the global objective. This is a novel algorithm.
+We also prove a regret bound for this strategy.
 
 \noindent
 $\bullet$
 The theoretical bound and empirical experiments
-shows a tradeoff between \rr and
+show a trade-off between \rr and
 \greedy. Last, we present a \hybrid 
 strategy that balances 
 \rr and \greedy. \hybrid is the 
-default multi-tenant model selection algorithm
+default multi-tenant model-selection algorithm
 in \eml.
 
 
@@ -902,10 +901,10 @@ in \eml.
 In the multi-tenant setting, \eml aims
 to serve $n$ different users instead of a single user.
 Without loss of generality, assume that
-each user $i\in[n]$ has her own machine learning 
+each user $i\in[n]$ has her own machine-learning 
 task represented by a different data set
-and each user $i$ can choose
-$K^{i}$ machine learning models.
+and that each user $i$ can choose
+$K^{i}$ machine-learning models.
 All users share the same infrastructure,
 and {\em at a single time point only
 a single user can be served}.
@@ -916,15 +915,15 @@ a canonical view of this problem.
 \paragraph*{Multi-tenant Regrets:} 
 We extend the definitions of instantaneous and cumulative 
 regrets for the multi-tenant setting. The key difference
-compared with the single-tenant setting is that,
+compared to the single-tenant setting is that,
 at round $t$, there are users who are not
 served. In this case, how should we define
 the regret for these unscheduled users?
 
-The key intuition is that these unscheduled users should
-also incurred a penalty --- by not serving them,
-these users do not have a chance to
-get a better model, instead, they need to stuck
+The intuition is that these unscheduled users should
+also incur a penalty --- because these users are not being served,
+they do not have a chance to
+get a better model. Instead, they need to stick
 with the same model as before. 
 Before we describe our extension for the
 multi-tenant regret, we introduce notation
@@ -934,7 +933,7 @@ as follows. At round $t$,
 serve.
 \item $a_{t}^{I_t}$: The arm played by the chosen user $I_t$ at round $t$.
 \item $t^i$: The last round a user $i$ gets served, i.e., $t^i = \argmax\{t': i=I_{t'}, 1\le t'\le t\}$.
-\item $a_{t^i}^i$: The arm played by user $i$ at last round she gets served.
+\item $a_{t^i}^i$: The arm played by user $i$ at the last round she gets served.
 \item $c^i_k$: the cost of tenant $i$ choosing model $k\in [K^i]$
 \item $c^{I_t}_{a_{t}^{I_t}}$: the cost of the chosen
 tenant $I_t$ play arm $a_{t^i}^i$.
@@ -949,16 +948,16 @@ R_T = \sum_{t=1}^T c^{I_t}_{a_{t}^{I_t}} \left (\sum_{i=1}^n r^i_{t^i} \right),
 \]
 where $r^i_t = \mu_*^i - \mathbb{E}(x_{a_{t^i}^i, t^i})$
 is the regret of user $i$ for continuing to
-use the model she chose at the last time she
-gets served. 
+use the model she chose the last time she
+got served. 
 Note that this regret is not {\em the sum of 
-regrets of all tenants} --- If we do not pick tenant $i$ at round $t$, it will incur the same regret 
-of round $t-1$.
+regrets of all tenants} --- that is, if we do not pick tenant $i$ at round $t$, it will incur the same regret 
+as round $t-1$.
 
 \paragraph*{Ease.ml Regret} Similar to
-the single tenant case, we can define
+the single-tenant case, we can define
 a variant of the cumulative 
-regret $R_t$ that directly related to
+regret $R_t$ that directly relates to
 \eml's design of always returning the
 {\em best model so far}. 
 \[
@@ -977,26 +976,24 @@ c^{I_t}_{a_{t}^{I_t}}
 \centering
 \includegraphics[width=0.75\columnwidth]{figures/multitenant}
 \vspace{-2em}
-\caption{A canonical view of the multi-tenant, cost-aware model selection problem we studied in this paper.}
+\caption{A canonical view of the multi-tenant, cost-aware model-selection problem we studied in this paper.}
 \label{fig:problem-formulation}
 \vskip -2ex
 \end{figure}
 
 \vspace{-1em}
 \paragraph*{The Problem of ``First Come First Served''}
-One of the most straightforward idea of
+One of the most straightforward ideas of
 serving multiple users might be the
-``first come first served'' (FCFS) strategy, in which
-the system will serve one tenant who 
-comes into the system first until it finds out
-its optimal algorithm. The system then 
-move on to serve the next user. 
-This simple strategy incurs a terrible cumulative regret of order $T$.
+``first come first served'' (FCFS) strategy in which
+the system will serve the tenant who 
+comes into the system first until it finds an optimal algorithm. The system then 
+moves on to serve the next user. 
+This strategy incurs a terrible cumulative regret of order $T$.
 
 \vspace{0.5em}
 \noindent
-{\bf (Example)} Intuitively, it is easy to see the
-reason why the FCFS strategy fails. Considering
+{\bf (Example)} Intuitively, it is easy to see why the FCFS strategy fails. Consider
 two users, each of which has the best possible
 model quality $100$. Each user has three models:
 \vspace{-0.5em}
@@ -1004,29 +1001,29 @@ model quality $100$. Each user has three models:
 \texttt{U1 = \{M1: 90, M2: 95, M3: 100\}} \\
 \texttt{U2 = \{M1: 70, M2: 95, M3: 100\}}
 \end{align*}
-Assuming \texttt{U1} comes slightly earlier 
-into the system 
+Assume \texttt{U1} comes 
+into the system slightly earlier
 and the system decides to try \texttt{M1} 
-for \texttt{U1} at the first round. Then
-at round $t=1$, \texttt{U1} incurs
+for \texttt{U1} in the first round. Then,
+in round $t=1$, \texttt{U1} incurs
 regret $r_{t=1}^1 = 100 - 90 = 10$
 and \texttt{U2} incurs regret $r_{t=1}^2 = 100$
 as it does not have a model to use. 
 In the second round, the FCFS strategy
 would continue to serve \texttt{U1}.
 Assume the system tried \texttt{M2}.
-Then at round $t=2$, \texttt{U1} incurs
+Then, in round $t=2$, \texttt{U1} incurs
 regret $r_{t=2}^1 = 100 - 95 = 5$
 and \texttt{U2} continues to
 incur regret $r_{t=2}^2 = 100$ because
-it still does not get served. The accumulative
-regret among all users already become
+it still has not been served. The accumulative
+regret among all users has already become
 215 at round $t=2$.
 On the other hand, if the system decides to
-serve \texttt{U2} at the second round,
+serve \texttt{U2} in the second round,
 \texttt{U1} would incur
-regret $r_{t=2}^1 = 10$
-same as the first round
+regret $r_{t=2}^1 = 10$, which is the
+same as the first round,
 and \texttt{U2} will
 incur regret $r_{t=2}^2 = 100 - 70 = 30$.
 In this case, the accumulative
@@ -1037,66 +1034,66 @@ regret among all users would become
 This example shows the importance of
 choosing the next user to serve. The goal of
 \eml is to design an algorithm
-to automatically management resource
+that automatically manages resource
 allocations among multiple users.
 
 \vspace{-0.5em}
 \paragraph*{Discussion: Relation to 
 Multi-task Model Selection}
-\textcolor{red}{We compare our multi-tenant
+We compare our multi-tenant
 regret with the most similar multi-task
 regret recently
-studied by Swersky et al.~\cite{XXX}.
-Swersky et al.~\cite{XXX} focuses on 
-k-fold cross validation by 
-taking advantage of the correlation between
-folds by skipping evaluating certain fold for the same model. Here, each fold corresponds to 
-one of our tenant, and the
+studied by Swersky et al.~\cite{Swersky2013}.
+Swersky et al. focus on 
+k-fold cross validation. They 
+take advantage of the correlation between
+folds by skipping the evaluations for certain folds for the same model. Here, each fold corresponds to 
+one of our tenants. The
 multi-task regret optimized by them
-is $\sum_{t=1}^T \sum_{i=1}^n f(x, i, t)$
+is $\sum_{t=1}^T \sum_{i=1}^n f(x, i, t)$,
 where $f(x, i, t)$ is the regret incurred
-at time $t$ for fold $i$ by choosing
+at time $t$ for fold $i$ after choosing
 model $x$. The key difference
-is that in their setting, choosing a
+is that, in their setting, choosing a
 better $x$ lowers the regret for {\em all}
-of the users while in our setting users
+users, while in our setting users
 who do not get served continue to incur 
 the same regret as before. 
 Directly using their algorithms would 
-cause problem in \eml --- considering
-the case when two users are strongly correlated, Swersky et al. would try to 
+cause a problem in \eml. Consider
+a case when two users are strongly correlated. Swersky et al. would try to 
 skip evaluating one user completely
-simply because it does not provide much new information; On the other hand, \eml must 
+simply because it does not provide much new information. \eml, on the other hand, must 
 balance between two users as it cannot 
 simply reuse the model trained 
 for user $i$ to serve a different user $j$.
-As a result, the \eml algorithm is also very different.}
+As a result, the \eml algorithm is also very different.
 
-\subsection{Round Robin GP-UCB}
+\subsection{Round-Robin GP-UCB}
 
-We start from a very simple strategy --- instead of
-serving users in a FCFS manner, how about
-serving them in a ``round robin'' way?
+We start from a very simple strategy. Instead of
+serving users in an FCFS manner, what if
+we serve them in a ``round robin'' way?
 More precisely, with $n$ users, 
-at round $t$, the system
-chooses to serve one user $i = t \mod n$.
-When a user gets served, she runs one
+at round $t$ the system
+chooses to serve one user: $i = t \mod n$.
+When that user gets served, she runs one
 iteration of her own GP-UCB algorithm. 
-Intuitively, this strategy enforce
+Intuitively, this strategy enforces
 the absolute ``fairness'' among all users.
 
 \vspace{-0.5em}
 \paragraph*{Theoretical Analysis}
 Surprisingly, the simple \rr strategy already
 has a much better regret bound compared
-with FCFS. The following theorem shows
+to FCFS. The following theorem shows
 the result. 
 
 \vspace{-0.5em}
 \begin{theorem}
   \label{thm:rr}
   Given $\delta\in (0,1)$ and set $\beta_t^i = 2c^\ast \log\left[\frac{\pi^2 n K^\ast t^2}{6\delta}\right]$ with $c^\ast = \max_{i\in [n], k\in [K^i]}\{c^i_k\}$ and $K^\ast = \max_{i\in [n]}\{K^i\}$. Then the
-  cumulative regret of Round Robin GP-UCB is bounded by
+  cumulative regret of Round-Robin GP-UCB is bounded by
   \[
      R'_T \leq \sqrt{n T}\sum_{i=1}^n \sqrt{I_i([T(i)])}
   \]
@@ -1106,11 +1103,11 @@ the result.
     I_i([T(i)]) & = \frac{8 (c^\ast)^2 \beta^\ast}{c_\ast \log(1 + (\sigma^\ast)^{-2})}\\
     &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2}(\sigma^i_{t-1}(a^i_{t}))^2\right),
   \end{align*}
-  with $c_\ast = \min_{i\in [n], k\in [K^i]}\{c^i_k\}$,  $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$, $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$, and $T(i)$ is the time point set when tenant $i$ is picked, up to time $T$, i.e.,
+  with $c_\ast = \min_{i\in [n], k\in [K^i]}\{c^i_k\}$,  $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$, $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$, and $T(i)$ is the time point set when tenant $i$ is picked up to time $T$, i.e.,
   $T(i) = \{s: 1\le s\le T, I_s = i\}$.
 \end{theorem}
 
-In the \rr case, each tenant is picked for the same amount of rounds, that is, all $|T(i)|$'s are roughly the same, bounded by $\lceil T/n\rceil$. Then $I_i([T(i)])$ can be uniformly bounded by $\log (T/n)$ for common used covariance (kernel) matrices; see Theorem 5 in \cite{SrinivasKKS10}. Thus the cumulative regret is bounded by (up to a constant) 
+In the \rr case, each tenant is picked for the same number of rounds, that is, all $|T(i)|$'s are roughly the same, bounded by $\lceil T/n\rceil$. Then $I_i([T(i)])$ can be uniformly bounded by $\log (T/n)$ for commonly used covariance (kernel) matrices; see Theorem 5 in \cite{SrinivasKKS10}. Thus, the cumulative regret is bounded by (up to a constant) 
 \begin{equation}
 n^{1.5}\sqrt{T \log |T(i)|} = n^{1.5}\sqrt{T \log {T\over n}}
 \label{eq:RR_simple_bound}
@@ -1121,37 +1118,37 @@ $R_T'/T < R_T/T \rightarrow 0$.
 \vspace{-0.5em}
 \paragraph*{Practical Considerations}
 From a theoretical point of view,
-\rr has the same theoretical bound
-as the final scheduler used inside \eml.
+\rr only has slightly worse theoretical bound
+than the final scheduler used by \eml.
 Practically, it outperforms FCFS 
-significantly --- however, there are
+significantly. However, there is
 still room to improve in practice. This
-motivates the novel, non-trivial, algorithm
+motivates the novel, nontrivial algorithm
 used in \eml.
 
 The enforcement of absolute fairness
 with a \rr strategy means that it could
-waste resources on users who already
-reach their optimal solution. For example,
-if there are two users \texttt{U1}
-and \texttt{U2}, and both have the best
+waste resources on users who already have
+reached their optimal solution. For example,
+consider two users \texttt{U1}
+and \texttt{U2} that both have the best
 possible quality 100. Assume that \texttt{U1}
-already reaches accuracy 99 while 
-\texttt{U2} is still at 70. In \rr.
-it will still schedule both users
-fairly. However, it is clear, in this case,
+has already reached accuracy 99 while 
+\texttt{U2} is still at 70. \rr
+will still schedule both users
+fairly. However, it is clear in this case
 that a better scheduler would put more
 resources on \texttt{U2}. This requires
 us to automatically balance between
-different users and more greedily
-serves users who the system believe
-could contribute more to the ``global happiness''
+different users and to disproportionately 
+serve users who the system believes
+could contribute more to the ``global satisfaction''
 of all users. However, reaching this
-goal is not trivial --- for each user,
-we does not know the real ``best possible
-quality'' beforehand, and thus, we need
-to estimate the possible potential
-improvement of each users from their
+goal is not trivial. For each user,
+we do not know the real ``best possible
+quality'' beforehand. Thus, we need
+to estimate the potential for 
+improvement for each user from their
 execution history and fuse these
 estimations in a comparable and balanced
 way across all users in the system.
@@ -1216,15 +1213,15 @@ dynamically allocate resources.
 \vspace{-0.5em}
 \paragraph*{Intuition}
 The intuition behind \greedy is to have
-each user runs their own GP-UCB. At round
+each user run their own GP-UCB. At round
 $t$, when the system tries to decide which
 user to serve, it estimates the
-``potential'' of each user as how much each
+``potential'' of each user regarding how much each
 user could further benefit from another
-model selection step. The system then
-choose a user with high-enough potential.
+model-selection step. The system then
+chooses a user with high-enough potential.
 The technical difficulty is how to
-estimate for each user her potential
+estimate the potential for each user 
 in a way that is comparable among all users.
 
 \vspace{-0.5em}
@@ -1232,38 +1229,37 @@ in a way that is comparable among all users.
 
 Algorithm~\ref{alg:mc-general} shows the details 
 of the \greedy algorithm. For simplicity,
-it shows only for the cost-obvious version of the algorithm --- the cost-aware version is simply replacing all occurrences of $\sqrt{\beta}$ by $\sqrt{\beta/c}$, where $c$ is the corresponding cost.
+these are shown only for the cost-oblivious version of the algorithm. The cost-aware version simply replaces all occurrences of $\sqrt{\beta}$ by $\sqrt{\beta/c}$, where $c$ is the corresponding cost.
 The \greedy algorithm consists of two phases.
 In the first phase (lines 6 to 8), we determine which user to schedule next (i.e., the \emph{user selection} phase).
 In the second phase (lines 9 to 12), we determine which model to run for this user (i.e., the \emph{model selection} phase).
-The model selection phase is straightforward --- we choose the model with respect to the single-tenant GP-UCB criterion. (Compare lines 9 to 12 in Algorithm~\ref{alg:mc-general} with lines 3 to 5 in Algorithm~\ref{alg:gp-ucb}.)
-The user selection phase is more sophisticated.
+The model-selection phase is straightforward. We choose the model with respect to the single-tenant GP-UCB criterion. (Compare lines 9 to 12 in Algorithm~\ref{alg:mc-general} to lines 3 to 5 in Algorithm~\ref{alg:gp-ucb}.)
+The user-selection phase is more sophisticated.
 
 
 
 One idea for user selection is to compare the best models from different users and pick ``the best of the best.''
 However, in what sense are the best models comparable?
 To understand the subtlety here, consider two models $M_1$ and $M_2$ from two users.
-Suppose that, at a certain time step $t$, the mean accuracy of $M_1$ and $M_2$ are 0.9 and 0.7, respectively.
+Suppose that, at a certain time step $t$, the mean accuracy of $M_1$ and $M_2$ is 0.9 and 0.7, respectively.
 Moreover, assume that the Gaussian variances of $M_1$ and $M_2$ are the same.
 The UCB criterion will then favor $M_1$ over $M_2$.
-In the single-tenant case this makes perfect sense: $M_1$ is a clear win over $M_2$.
-In the multi-tenant case this is perhaps indefinite, because it is possible that $M_1$ is working on an easy dataset whereas $M_2$ is working on a hard one.
-Therefore, the mean accuracy in the UCB criterion (i.e., the $\mu$ part in single-tenant GP-UCB) is not a reliable indicator of the potential model improvement when comparing different users.
+In the single-tenant case, this makes perfect sense: $M_1$ is a clear win over $M_2$.
+In the multi-tenant case, this is perhaps indefinite because it is possible that $M_1$ is working on an easy data set whereas $M_2$ is working on a hard one.
+Therefore, the mean accuracy in the UCB criterion (i.e., the $\mu$ part in the single-tenant GP-UCB) is not a reliable indicator of the potential model improvement when comparing different users.
 Based on this observation, we choose to omit the mean accuracy in the UCB criterion and focus on the observed variance.
 
-This leads to the specific user selection strategy illustrated in lines 6 to 8 of Algorithm~\ref{alg:mc-general}.
+This leads to the specific user-selection strategy illustrated in lines 6 to 8 of Algorithm~\ref{alg:mc-general}.
 In line 6, we first compute more accurate regrets for users with new observations.
 Clearly, line 6 represents a recurrence relation on the empirical confidence bounds.
-Assuming that the user $i$ was scheduled at the time $t-1$, the empirical confidence bound for the user $i$ after the time $t-1$ (i.e., at the time $t$) is either the updated upper confidence bound $B_{t-1}$
-or the minimum empirical confidence bound before the time $t$, whichever is smaller (i.e., tighter).
-Intuitively, the empirical confidence bound tries to tighten the upper confidence bound by utilizing the observed reward more directly: The UCB criterion merely uses the observations to update the parameters of the Gaussian process.
+Assuming that user $i$ was scheduled at time $t-1$, the empirical confidence bound for user $i$ after time $t-1$ (i.e., at time $t$) is either the updated upper confidence bound $B_{t-1}$
+or the minimum empirical confidence bound before time $t$, whichever is smaller (i.e., tighter).
+Intuitively, the empirical confidence bound tries to tighten the upper confidence bound by utilizing the observed reward more directly. The UCB criterion merely uses the observations to update the parameters of the Gaussian Process.
 In lines 7 and 8, we further use the empirical variances of the users to determine which one to schedule next.
-Specifically, we first decide a set of candidate users whose empirical confidence bounds are above the average, and then pick one user from the candidates.
+Specifically, we first identify a set of candidate users whose empirical confidence bounds are above the average and then pick one user from the candidates.
 
-\vspace{-0.5em}
 \paragraph*{Strategy for Line 8}
-By choosing a user with confidence bound above the average, we can reduce the time-averaging regret.
+By choosing a user with a confidence bound above the average, we can reduce the time-averaging regret.
 It is interesting that the regret bound remains the same regardless of the rule for picking a user from the candidates (line 8), though in practice different rules may make a difference.
 For example, picking the user with the maximum empirical variance may be better than randomly picking a user. In \eml, we 
 use a rule that picks the user with the maximum
@@ -1271,7 +1267,6 @@ gap between the largest upper confidence bound
 and the best accuracy so far.
 Nevertheless, the existence of an optimal rule in the practical sense remains as an open question.
 
-\vspace{-0.5em}
 \paragraph*{Theoretical Analysis} We
 can prove the following regret bound
 for the \greedy algorithm.
@@ -1311,9 +1306,9 @@ $I_i([T(i)])$ is proportional to the information gain for each user $i$. In part
   \[
  n^{3/2}\sqrt{T\sum_{i=1}^n \log(|T(i)|)}  \leq \underbrace{n^{3/2}\sqrt{T \log\left(\frac{T}{n}\right)}}_{\text{the regret for RR, see \eqref{eq:RR_simple_bound}}}.
   \]
-For other two common used kernel functions: the Squared Exponential kernel and the Mat\'{e}rn kernel, we can also get a bound, which is sublinear in $T$, and thus $R_T/T \to 0$ as $T\to\infty$. We refer to Section 5.2 in \cite{SrinivasKKS10} for details. Comparing to RR, we can observe that the regret of multi-tenant GP-UCB is slightly better than the one of RR, see \eqref{eq:RR_simple_bound}.  
+For two other commonly used kernel functions -- the Squared Exponential kernel and the Mat\'{e}rn kernel -- we can also get a bound that is sublinear in $T$, and thus $R_T/T \to 0$ as $T\to\infty$ (Section 5.2 in \cite{SrinivasKKS10}). We see that the regret of the multi-tenant GP-UCB is slightly better than the one of \rr. 
 
-
+\vspace{0.5em}
 \subsection{A Hybrid Approach}
 
 One problem of Algorithm~\ref{alg:mc-general} is that it may enter a \emph{freezing stage} and never step out.
@@ -1326,35 +1321,35 @@ Consequently, the empirical variances for the users remain almost constant, whic
 To overcome this problem, we further propose a hybrid approach.
 When we notice that the candidate set remains unchanged and the overall regret does not drop for $s$ steps,
 we know that the algorithm has entered the freezing stage.
-We then switch to the round-robin user selection strategy so that the algorithm can leave the freezing stage and make progress on the other users.
+We then switch to the round-robin user-selection strategy so that the algorithm can leave the freezing stage and make progress on the other users.
 We used this hybrid approach in our experimental evaluation (Section~\ref{sec:experiments}), where we set $s=10$.
-As we have just discussed, this hybrid approach observes the same regret bound as Algorithm~\ref{alg:mc-general} because using a round-robin user selection strategy instead won't change the regret bound.
+As we have just discussed, this hybrid approach observes the same regret bound as Algorithm~\ref{alg:mc-general} because using a round-robin user-selection strategy instead does not change the regret bound.
 
-
+\vspace{0.5em}
 \subsection{Discussion on Limitations} \label{sec:limitations}
 
 As the first attempt
-of the multitenant model selection problem,
+at resolving the multi-tenant model-selection problem,
 this paper has the following limitations.
 From the theortical perspective, the regret bound
-is not yet theortically optimal and tight.
+is not yet theortically optimal.
 From the practical perspective,
 the current framework only supports the case where
-the whole GPU pool are treated as a single device.
+the whole GPU pool is treated as a single device.
 With our current scale (29 GPUs), this is not
-a problem as we can achieve linear scale up
+a problem as we can achieve linear scaleup
 with all GPUs to train a single model. However, as our service grows
-rapidly, we need to extend our current framework
-to be aware of multiple devices in the near future.
+rapidly, we will need to extend our current framework
+such that it is aware of multiple devices in the near future.
 Another limitation is that our
 analysis focuses on GP-UCB and it is not clear
 how to integrate other algorithms such as
 GP-EI and GP-PI into a multi-tenant 
 framework. Last, we define the global
-happiness of all users as the sum 
+satisfaction of all users as the sum 
 of their regrets. It is not clear how to
-integrate hard rules such as ``deadline''
-associated with each user and design
+integrate hard rules such as the ``each user's deadline'' 
+and design
 algorithms for other aggregation functions.
 
 
@@ -1396,7 +1391,7 @@ user corresponds to a data set and
 each data set:
 NIN, GoogLeNet, ResNet-50, AlexNet, BN-AlexNet, ResNet-18, VGG-16, and SqueezeNet.
 Each (user, model) pair is trained with
-an Adam optimizer~\cite{XX}. The
+an Adam optimizer~\cite{Kingma2014}. The
 system automatically grid-searches 
 the initial learning rate in
 \{0.1, 0.01, 0.001, 0.0001\} and
@@ -1953,13 +1948,13 @@ multi-devices.
 \vspace{-0.5em}
 From the system perspective, \eml is closely related to the
 AutoML systems recently built by the database and machine learning communities.
-Examples include Spark TuPAQ~\cite{XXX}, Auto-WEKA~\cite{XXX}, 
-Google Vizier~\cite{XXX}, Spearmint~\cite{XXX}, GPyOpt~\cite{XXX},
-Auto scikit-learn~\cite{XXX} et al. Most of these systems
+Examples include Spark TuPAQ~\cite{Sparks2015}, Auto-WEKA~\cite{Thornton2013,Kotthoff2017}, 
+Google Vizier~\cite{Golovin2017}, Spearmint~\cite{Snoek2012}, GPyOpt~\cite{gpyopt2016},
+and Auto scikit-learn~\cite{Feurer2015}. Most of these systems
 are built on state-of-the-art automatic model selection and 
 hyperparameter tuning algorithms such as GP-UCB~\cite{SrinivasKKS10},
 GP-PI~\cite{Kushner1964}, GP-EI~\cite{SnoekLA12}.
-See a survey by Luo~\cite{Luo16} for an overview.
+See Luo~\cite{Luo16} for an overview.
 Compared to these systems, \eml is an AutoML system based on GP-UCB. However, the focus is
 on the multi-tenant case in which multiple users share the same
 infrastructure running machine learning workloads. To our best knowledge,
@@ -1972,7 +1967,7 @@ optimized for multiple concurrent single-tenant model selection tasks.
 \eml contains a new multi-task model-selection algorithm. 
 
 Compared to previous work, \eml focuses
-on a different multi-tenant setting. For example, Swersky et al.~\cite{XXX}
+on a different multi-tenant setting. For example, Swersky et al.~\cite{Swersky2013}
 proposed different algorithms for two scenarios. 
 Other than the cross validation application we discussed before,
 it also consider cases when
@@ -1982,7 +1977,7 @@ try to query the cheaper classifier to get information
 for the expensive one --- this is different from our objective
 as their algorithm requires a ``primary user'' while in \eml
 all users need to be treated equally. Similar observations
-hold for previous work by Bardenet et al.~\cite{XXX} and Hutter et al.~\cite{XXX}.
+hold for previous work by Bardenet et al.~\cite{Bardenet2013} and Hutter et al.~\cite{Hutter2011}.
 We designed \eml to optimize for an objective
 that we generalized from our experience in serving our collaborators
 and design a novel algorithm. 
@@ -1991,7 +1986,7 @@ and design a novel algorithm.
 \paragraph*{Multi-task Gaussian Process}
 There has been work done in extending the Gaussian Process to the 
 multi-task case. One technical example is the {\em intrinsic model
-of coregionalization}~\cite{XXX} that decomposes
+of coregionalization}~\cite{Goovaerts1997} that decomposes
 a kernel with a Kronecker product. Most 
 multi-task model-selection algorithms uses some version of
 a multi-task Gaussian Process as the underlying estimator.
@@ -2001,7 +1996,7 @@ future direction will be to further integrate user correlations
 into \eml after we have a better understanding of the dependencies
  among users.
 Another related direction is parallel Gaussian Process in which multiple
-processes are being evaluated instead of just one~\cite{XXX}.
+processes are being evaluated instead of just one~\cite{Desautels2014}.
 The key here is to balance the diversity of multiple samples
 and integrating similar techniques
 to extend \eml's resource model from a single device to multiple devices will be the subject of future work.
@@ -2011,22 +2006,22 @@ to extend \eml's resource model from a single device to multiple devices will be
 The focus of multi-tenancy on shared infrastructure is not new ---
 in fact, it has been one of the classic topics intensively
 studied by the database community. Examples include
-sharing buffer pools~\cite{XXX} and CPUs~\cite{XXX}
+sharing buffer pools~\cite{Narasayya2015} and CPUs~\cite{Das2013}
 for multi-tenant relational ``databases-as-a-service''
-and sharing semi-structured data sources~\cite{XXX}.
+and sharing semi-structured data sources~\cite{Bellare2013}.
 \eml is inspired by such work but focuses on
 multi-tenancy for machine learning.
 
 \vspace{-1em}
 \paragraph*{Declarative Machine Learning Clouds} 
 There has been intensive study of declarative
-machine learning systems~\cite{XXX,XXX,XXX,XXX,XXX,XXX}. In \eml we 
+machine learning systems~\cite{Boehm2016a,Meng2001,Alexandrov2015,Abadi2016,Low2012,Hellerstein:2012:VLDB,Sparks2017}. In \eml we 
 study how to integrate automatic model selection into
 a high-level abstraction and hope our result can be integrated
 into other systems in the future.
 Another related system trend is the so-called ``machine learning
-cloud''. Examples include the Azure ML Studio~\cite{XXX}
-and Amazon ML~\cite{XXX}. These services
+cloud''. Examples include the Azure ML Studio
+and Amazon ML. These services
 provide a high-level interface and often support automatic model selection
 and hyperparameter tuning. \eml is designed with the goal of
 lowering the operating cost for these services 
@@ -2047,6 +2042,7 @@ infrastructure.
 %\newpage
 
 %\newpage
+
 \bibliographystyle{abbrv}
 \bibliography{vldb_sample}  
 
