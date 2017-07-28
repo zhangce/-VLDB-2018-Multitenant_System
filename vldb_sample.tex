@@ -307,7 +307,7 @@ the total regret $R_T$ of all users is bounded by
 $
 R_T < C n^{3/2}\sqrt{T\log \frac{T}{n}}, 
 $
-where $T$ is the total execution time
+where $T$ is the total execution time.
 and $C$ is a constant.
 This is in line with the best known bound for the standard GP-UCB algorithm.
 It implies that both algorithms are \emph{regret-free}, i.e., $R_T/T \rightarrow 0$, which is a desired property for any model selection algorithm in practice.
@@ -864,38 +864,28 @@ default multi-tenant model selection algorithm
 in \eml.
 
 
+\vspace{-0.5em}
 \subsection{Problem Formulation}
 
 In the multi-tenant setting, \eml aims
 to serve $n$ different users instead of a single user.
 Without loss of generality, assume that
 each user $i\in[n]$ has her own machine learning 
-task represented by a dataset $D_i$
-and all users can choose from the
-same set of $K$ machine learning models.
+task represented by a different data set
+and each user $i$ can choose
+$K^{i}$ machine learning models.
 All users share the same infrastructure,
 and {\em at a single time point only
 a single user can be served}.
 Figure~\ref{fig:problem-formulation} illustrates 
 a canonical view of this problem.
 
-
-For a dataset $D$ of a given user, 
-we use $A_k(D) \in \R_+$ to denote the performance (e.g.,  accuracy) of the $k^{th}$ model 
-$A_k$ on the dataset $D$ and use
-$A(D) \in \R_+^K$ to denote the performance of all algorithms on $D$ \textcolor{red}{Since the observation noise is very small, we do not distinguish $A_k(D)$ and its expectation $\mathbb{E}(A_k(D))$.}. Let $c_k(D)$ be the cost (execution time)
-of the $k^{th}$ model on the dataset $D$.
-In \eml we have a cost model for $c_k(D)$
-as it is much easier to estimate compared with
-the accuracy $A_k(D)$. 
-\footnote{Ji' comment: I do not think that it is necessary to involve new notations based on $D$.}
-
 \vspace{-0.5em}
 \paragraph*{Multi-tenant Regrets:} 
 We extend the definitions of instantaneous and cumulative 
 regrets for the multi-tenant setting. The key difference
 compared with the single-tenant setting is that,
-at time step $t$, there are users who are not
+at round $t$, there are users who are not
 served. In this case, how should we define
 the regret for these unscheduled users?
 
@@ -903,53 +893,247 @@ The key intuition is that these unscheduled users should
 also incurred a penalty --- by not serving them,
 these users do not have a chance to
 get a better model, instead, they need to stuck
-with the same model as before. Let $\cA_t^{(i)} \subseteq [K]$
-be the set of models \eml tried for user $i$
-up to time $t$. We define the \eml multi-tenant
-regret as:
+with the same model as before. 
+Before we describe our extension for the
+multi-tenant regret, we introduce notation
+as follows. At round $t$,
+\begin{enumerate}[noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt]
+\item $I_t$: The user that the system chooses to
+serve.
+\item $a_{t}^{I_t}$: The arm played by the chosen user $I_t$ at round $t$.
+\item $t^i$: The last round a user $i$ gets served, i.e., $t^i = \argmax\{t': i=I_{t'}, 1\le t'\le t\}$.
+\item $a_{t^i}^i$: The arm played by user $i$ at last round she gets served.
+\item $c^i_k$: the cost of tenant $i$ choosing model $k\in [K^i]$
+\item $c^{I_t}_{a_{t}^{I_t}}$: the cost of the chosen
+tenant $I_t$ play arm $a_{t^i}^i$.
+\item $\mu_*^i$: best possible quality that 
+user $i$ can get.
+\end{enumerate}
+
+We define the cumulative,
+multi-tenant, cost-aware, regret as
 \[
-R'_T = \sum_{t} \mathbb{E}\left(c^{I_t}_{a_t^{I_t}}\sum_{i} \left(\mu^{(i)}_* -  \max_{a\in \mathcal{A}_t^{(i)}}x_{a, t}\right)\right)
+R_T = \sum_{t=1}^T c^{I_t}_{a_{t}^{I_t}} \left (\sum_{i=1}^n r^i_{t^i} \right),
 \]
+where $r^i_t = \mu_*^i - \mathbb{E}(x_{a_{t^i}^i, t^i})$
+is the regret of user $i$ for continuing to
+use the model she chose at the last time she
+gets served. 
+Note that this regret is not {\em the sum of 
+regrets of all tenants} --- If we do not pick tenant $i$ at round $t$, it will incur the same regret 
+of round $t-1$.
 
-
-Given that only one user is scheduled at any time step $t$, how should we define the instantaneous regret for a user that is not scheduled at $t$?
-Note that the $r_t$ in Equation~\ref{eq:instant-regret} is not defined for unscheduled user.
-This would be difficult if negative rewards were allowed.
-Fortunately, we have restricted reward in model selection as the observed model performance, which must be positive.
-As a result, we can simply set $x_t=0$ in Equation~\ref{eq:instant-regret} for a user that is not scheduled at $t$, namely, the user incurs the maximum regret for being ignored.
-The definition for cumulative regret (Equation~\ref{eq:cumulative-regret}) remains the same under this extended semantic.
-
-The remaining question is the optimization goal.
-A solution to the STCO bandit problem aims for minimizing the time-averaging regret $R_T/T$ for a given time $T$, which goes to zero as $T$ goes to infinity if the solution is regret-free (Equation~\ref{eq:regret-free}).
-A natural extension could be then to minimize the time-averaging regret for each user (at the same given time $T$) simultaneously.
-However, this is apparently unfeasible even if all users are homogeneous (i.e., they provide the same models running on the same datasets), because reducing the regret of one user will unavoidably increase the regrets of the others.
-This implies that absolute fairness is not achievable in multi-tenancy: We have to sacrifice fairness for better efficiency.
-Here we propose to minimize the total regret of all users, which is another natural extension to the STCO case.
-Formally, let $R_T^i$ be the cumulative regret (under the extended semantics of regrets) of user $i\in[n]$ at time $T$.
-We aim for minimizing
-\begin{equation}\label{eq:time-avg-regret}
-R_T/T=\frac{1}{T}\sum\nolimits_{i=1}^n R_T^i.
-\end{equation}
-The regret-free property remains desirable.
+\paragraph*{Ease.ml Regret} Similar to
+the single tenant case, we can define
+a variant of the cumulative 
+regret $R_t$ that directly related to
+\eml's design of always returning the
+{\em best model so far}. 
+\[
+R_T' = \sum_{t=1}^T
+c^{I_t}_{a_{t}^{I_t}} 
+\left(
+\sum_{i=1}^n 
+\left(
+\mu_*^i - \mathbb{E}(\max_t x_{a_{t^i}^i, t^i})
+\right)
+\right) < R_T
+\]
 
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.9\columnwidth]{figures/multitenant}
+\includegraphics[width=0.75\columnwidth]{figures/multitenant}
 \vspace{-2em}
 \caption{A canonical view of the multi-tenant, cost-aware model selection problem we studied in this paper.}
 \label{fig:problem-formulation}
 \vskip -2ex
 \end{figure}
 
+\vspace{-1em}
+\paragraph*{The Problem of ``First Come First Served''}
+One of the most straightforward idea of
+serving multiple users might be the
+``first come first served'' (FCFS) strategy, in which
+the system will serve one tenant who 
+comes into the system first until it finds out
+its optimal algorithm. The system then 
+move on to serve the next user. 
+This simple strategy incurs a terrible cumulative regret of order $T$.
 
-\begin{algorithm} [t]                     % enter the algorithm environment
+\vspace{0.5em}
+\noindent
+{\bf (Example)} Intuitively, it is easy to see the
+reason why the FCFS strategy fails. Considering
+two users, each of which has the best possible
+model quality $100$. Each user has three models:
+\vspace{-0.5em}
+\begin{align*}
+\texttt{U1 = \{M1: 90, M2: 95, M3: 100\}} \\
+\texttt{U2 = \{M1: 70, M2: 95, M3: 100\}}
+\end{align*}
+Assuming \texttt{U1} comes slightly earlier 
+into the system 
+and the system decides to try \texttt{M1} 
+for \texttt{U1} at the first round. Then
+at round $t=1$, \texttt{U1} incurs
+regret $r_{t=1}^1 = 100 - 90 = 10$
+and \texttt{U2} incurs regret $r_{t=1}^2 = 100$
+as it does not have a model to use. 
+In the second round, the FCFS strategy
+would continue to serve \texttt{U1}.
+Assume the system tried \texttt{M2}.
+Then at round $t=2$, \texttt{U1} incurs
+regret $r_{t=2}^1 = 100 - 95 = 5$
+and \texttt{U2} continues to
+incur regret $r_{t=2}^2 = 100$ because
+it still does not get served. The accumulative
+regret among all users already become
+215 at round $t=2$.
+On the other hand, if the system decides to
+serve \texttt{U2} at the second round,
+\texttt{U1} would incur
+regret $r_{t=2}^1 = 10$
+same as the first round
+and \texttt{U2} will
+incur regret $r_{t=2}^2 = 100 - 70 = 30$.
+In this case, the accumulative
+regret among all users would become
+150 at round $t=2$.
+
+\vspace{0.5em}
+This example shows the importance of
+choosing the next user to serve. The goal of
+\eml is to design an algorithm
+to automatically management resource
+allocations among multiple users.
+
+\vspace{-0.5em}
+\paragraph*{Discussion: Relation to 
+Multi-task Model Selection}
+\textcolor{red}{We compare our multi-tenant
+regret with the most similar multi-task
+regret recently
+studied by Swersky et al.~\cite{XXX}.
+Swersky et al.~\cite{XXX} focuses on 
+k-fold cross validation by 
+taking advantage of the correlation between
+folds by skipping evaluating certain fold for the same model. Here, each fold corresponds to 
+one of our tenant, and the
+multi-task regret optimized by them
+is $\sum_{t=1}^T \sum_{i=1}^n f(x, i, t)$
+where $f(x, i, t)$ is the regret incurred
+at time $t$ for fold $i$ by choosing
+model $x$. The key difference
+is that in their setting, choosing a
+better $x$ lowers the regret for {\em all}
+of the users while in our setting users
+who do not get served continue to incur 
+the same regret as before. 
+Directly using their algorithms would 
+cause problem in \eml --- considering
+the case when two users are strongly correlated, Swersky et al. would try to 
+skip evaluating one user completely
+simply because it does not provide much new information; On the other hand, \eml must 
+balance between two users as it cannot 
+simply reuse the model trained 
+for user $i$ to serve a different user $j$.
+As a result, the \eml algorithm is also very different.}
+
+\subsection{Round Robin GP-UCB}
+
+We start from a very simple strategy --- instead of
+serving users in a FCFS manner, how about
+serving them in a ``round robin'' way?
+More precisely, with $n$ users, 
+at round $t$, the system
+chooses to serve one user $i = t \mod n$.
+When a user gets served, she runs one
+iteration of her own GP-UCB algorithm. 
+Intuitively, this strategy enforce
+the absolute ``fairness'' among all users.
+
+\vspace{-0.5em}
+\paragraph*{Theoretical Analysis}
+Surprisingly, the simple \rr strategy already
+has a much better regret bound compared
+with FCFS. The following theorem shows
+the result. 
+
+\vspace{-0.5em}
+\begin{theorem}
+  \label{thm:rr}
+  Given $\delta\in (0,1)$ and set $\beta_t^i = 2c^\ast \log\left[\frac{\pi^2 n K^\ast t^2}{6\delta}\right]$ with $c^\ast = \max_{i\in [n], k\in [K^i]}\{c^i_k\}$ and $K^\ast = \max_{i\in [n]}\{K^i\}$. Then the
+  cumulative regret of Round Robin GP-UCB is bounded by
+  \[
+     R'_T \leq \sqrt{n T}\sum_{i=1}^n \sqrt{I_i([T(i)])}
+  \]
+  with probability at least $1-\delta$,
+  where
+  \begin{align*}
+    I_i([T(i)]) & = \frac{8 (c^\ast)^2 \beta^\ast}{c_\ast \log(1 + (\sigma^\ast)^{-2})}\\
+    &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2}(\sigma^i_{t-1}(a^i_{t}))^2\right),
+  \end{align*}
+  with $c_\ast = \min_{i\in [n], k\in [K^i]}\{c^i_k\}$,  $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$, $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$, and $T(i)$ is the time point set when tenant $i$ is picked, up to time $T$, i.e.,
+  $T(i) = \{s: 1\le s\le T, I_s = i\}$.
+\end{theorem}
+
+In the \rr case, each tenant is picked for the same amount of rounds, that is, all $|T(i)|$'s are roughly the same, bounded by $\lceil T/n\rceil$. Then $I_i([T(i)])$ can be uniformly bounded by $\log (T/n)$ for common used covariance (kernel) matrices; see Theorem 5 in \cite{SrinivasKKS10}. Thus the cumulative regret is bounded by (up to a constant) 
+\begin{equation}
+n^{1.5}\sqrt{T \log |T(i)|} = n^{1.5}\sqrt{T \log {T\over n}}
+\label{eq:RR_simple_bound}
+\end{equation}
+Thus, when the $T \rightarrow \infty$,
+$R_T'/T < R_T/T \rightarrow 0$.
+
+\vspace{-0.5em}
+\paragraph*{Practical Considerations}
+From a theoretical point of view,
+\rr has the same theoretical bound
+as the final scheduler used inside \eml.
+Practically, it outperforms FCFS 
+significantly --- however, there are
+still room to improve in practice. This
+motivates the novel, non-trivial, algorithm
+used in \eml.
+
+The enforcement of absolute fairness
+with a \rr strategy means that it could
+waste resources on users who already
+reach their optimal solution. For example,
+if there are two users \texttt{U1}
+and \texttt{U2}, and both have the best
+possible quality 100. Assume that \texttt{U1}
+already reaches accuracy 99 while 
+\texttt{U2} is still at 70. In \rr.
+it will still schedule both users
+fairly. However, it is clear, in this case,
+that a better scheduler would put more
+resources on \texttt{U2}. This requires
+us to automatically balance between
+different users and more greedily
+serves users who the system believe
+could contribute more to the ``global happiness''
+of all users. However, reaching this
+goal is not trivial --- for each user,
+we does not know the real ``best possible
+quality'' beforehand, and thus, we need
+to estimate the possible potential
+improvement of each users from their
+execution history and fuse these
+estimations in a comparable and balanced
+way across all users in the system.
+This motivates
+the novel \greedy algorithm we designed for \eml.
+
+
+\begin{algorithm} [t!]                     % enter the algorithm environment
 \scriptsize
-\caption{Multi-tenant GP-UCB}          % give the algorithm a caption
+\caption{\greedy, cost-oblivious, multi-tenant GP-UCB}          % give the algorithm a caption
 \label{alg:mc-general}                           % and a label for \ref{} commands later in the document
 \begin{algorithmic}[1]                    % enter the algorithmic environment
    \REQUIRE GP prior $\{\mu_0^i\}_{i=1}^n$, $\{\sigma^i\}_{i=1}^n$, $\{\Sigma^i\}_{i=1}^n$, and $\delta\in (0,1)$
-   \ENSURE Return the best algorithm among all algorithms in $a_{[1:T]}^i$ for all users $i=1, \cdots, n$.
+   \ENSURE Return the best algorithm among all algorithms in $a_{[1:T]}^i$ for all users $[n]$.
    \FOR{$i=1,...n$}
        \STATE Initialize $\sigma_0^i = \text{diag}(\Sigma^i)$ and $t_i=1$
        \STATE Run one step of GP-UCB (i.e., lines 3 to 5 of Algorithm~\ref{alg:gp-ucb}) for the user $i$ to obtain $\sigma^i_{t_i}$ and $\mu^i_{t_i}$
@@ -962,6 +1146,8 @@ The regret-free property remains desirable.
    %\tilde{\sigma}^i_{t_i-1} = \underbrace{\min\left\{B_{t_i-1}(a^i_{t_i-1}), \min_{t'<t_i-1} y^i_{t'}+ \tilde{\sigma}^{i}_{t'} \right\}}_{\text{Estimate the $f^*$}} - y^i_{t_i-1}
    \tilde{\sigma}^i_{t_i-1} = \min\left\{B_{t_i-1}(a^i_{t_i-1}), \min_{t'<t_i-1} y^i_{t'}+ \tilde{\sigma}^{i}_{t'} \right\} - y^i_{t_i-1} 
    \]
+   where $
+   B_t(k)=\mu_{t-1}(k) + \sqrt{\beta_t}\sigma_{t-1}(k)$.
       \STATE Decide the candidate set
    \[
      V_t := \left\{ i\in [n]: 
@@ -989,152 +1175,80 @@ The regret-free property remains desirable.
 \end{algorithm}
 
 
-\subsection{Multi-tenant GP-UCB}
-When multiple tenants are available, we can only pick one tenant to run at each round. Our goal is to minimize the cumulative regret 
-\textcolor{blue}{
-\[
-R'_T = \sum_{t} \mathbb{E}\left(c^{I_t}_{a_t^{I_t}}\sum_{i} \left(\mu^{(i)}_* -  \max_{a\in \mathcal{A}_t^{(i)}}x_{a, t}\right)\right)
-\]
-}
-\[
-R_T = \sum_{t=1}^T\sum_{i=1}^n c^{I_t}_{a_{t}^{I_t}}r^i_{t^i},
-\]
-where $c_i^k$ is the cost of tenant $i$ choosing model $k\in [K^i]$, $r^i_t = f(a^{i,\ast})-f(a^i_t)$, and $I_t$ is the model selected at round $t$.
+\subsection{Greedy GP-UCB}
 
+We now describe the \greedy algorithm, an 
+algorithm that improves over \rr by balancing
+users and dynamically allocate resources. 
 
+\vspace{-0.5em}
+\paragraph*{Intuition}
+The intuition behind \greedy is to have
+each user runs their own GP-UCB. At round
+$t$, when the system tries to decide which
+user to serve, it estimates the
+``potential'' of each user as how much each
+user could further benefit from another
+model selection step. The system then
+choose a user with high-enough potential.
+The technical difficulty is how to
+estimate for each user her potential
+in a way that is comparable among all users.
 
-Note that this regret is not the sum of regrets of all tenants, since at any time point the regret is computed {\color{red}from current regrets from all tenants}. It means that if we do not pick tenant $i$ at round $t$, then its regret at round $t-1$ will be undertaken at round $t$ again. Therefore, we use the time index $t^i$, which is the most recent time when tenant $i$ is picked, up to $t$, i.e.,
-\[
-t^i = \argmax\{s: i=I_s, 1\le s\le t\}.
-\]
-The most straightforward idea is applying the FIFS principle: we serve each tenant until find out its optimal algorithm before move to the next one. Unfortunately, it gives a very terrible cumulative regret, which is of order $T$.
+\vspace{-0.5em}
+\paragraph*{The Greedy Algorithm}
 
-\subsubsection{Round Robin GP-UCB}
-A simple idea to avoid the embarrassment is to apply the round robin principle, that is, each tenant will be selected alternatively. The native approach admits the following cumulative regret.
-
-
-\paragraph*{Theoretical Analysis}
-
-{\color{red} Round Robin, cost-aware case}
-
-\begin{theorem}
-  \label{thm:rr}
-  Given $\delta\in (0,1)$ and set $\beta_t^i = 2c^\ast \log\left[\frac{\pi^2 n K^\ast t^2}{6\delta}\right]$ with $c^\ast = \max_{i\in [n], k\in [K^i]}\{c^i_k\}$ and $K^\ast = \max_{i\in [n]}\{K^i\}$. Then the
-  cumulative regret of Round Robin GP-UCB is bounded above by
-  \[
-     R'_T \leq \sqrt{n T}\sum_{i=1}^n \sqrt{I_i([T(i)])}
-  \]
-  with probability at least $1-\delta$,
-  where
-  \begin{align*}
-    I_i([T(i)]) & = \frac{8 (c^\ast)^2 \beta^\ast}{c_\ast \log(1 + (\sigma^\ast)^{-2})}\\
-    &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2}(\sigma^i_{t-1}(a^i_{t}))^2\right),
-  \end{align*}
-  with $c_\ast = \min_{i\in [n], k\in [K^i]}\{c^i_k\}$,  $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$, $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$, and $T(i)$ is the time point set when tenant $i$ is picked, up to time $T$, i.e.,
-  \begin{equation}
-    \label{eq:T(i)}
-    T(i) = \{s: 1\le s\le T, I_s = i\}.
-  \end{equation}
-\end{theorem}
-
-In the Round Robin case, each tenant is picked for the same amount of rounds, that is, all $|T(i)|$'s are roughly the same, bounded by $\lceil T/n\rceil$. Then $I_i([T(i)])$ can be uniformly bounded by $\log (T/n)$ for common used covariance (kernel) matrices; see Theorem 5 in \cite{SrinivasKKS10} for details, and thus the cumulative regret is bounded by (up to a constant factor) 
-\begin{equation}
-n^{1.5}\sqrt{T \log |T(i)|} = n^{1.5}\sqrt{T \log {T\over n}}
-\label{eq:RR_simple_bound}
-\end{equation}
-Therefore, when the running time goes to infinity, the regret will converge to zero.
-
-
-\subsubsection{Multi-tenant GP-UCB}
-
-We now extend the single-tenant, cost-aware GP-UCB algorithm to the multi-tenant case.
-For ease of exposition, we define $B_t(k)$ to be the upper confidence bound of the model $k\in[K]$ at the time $t$: %namely,
-\begin{equation}
-B_t(k)=\mu_{t-1}(k) + \sqrt{\beta_t}\sigma_{t-1}(k).
-\end{equation}
-Under this notation, for example, Equation~\ref{eq:gp-ucb} can be simplified as $a_t=\argmax_{k\in [K]} B_t(k)$.
-
-%\begin{equation}
-%\sqrt{\beta_{t_i-1}}\sigma_{t_i-2}(a^i_{t_i-1}) + \mu_{t_i-2}(a^i_{t_i-1}).
-%\end{equation}
-
-Algorithm~\ref{alg:mc-general} presents the details of the multi-tenant GP-UCB algorithm.
-(We only present the cost-oblivious version of the algorithm --- the cost-aware version is simply replacing all occurrences of $\sqrt{\beta}$ by $\sqrt{\beta/c}$, where $c$ is the corresponding cost.)
-It consists of two phases.
+Algorithm~\ref{alg:mc-general} shows the details 
+of the \greedy algorithm. For simplicity,
+it shows only for the cost-obvious version of the algorithm --- the cost-aware version is simply replacing all occurrences of $\sqrt{\beta}$ by $\sqrt{\beta/c}$, where $c$ is the corresponding cost.
+The \greedy algorithm consists of two phases.
 In the first phase (lines 6 to 8), we determine which user to schedule next (i.e., the \emph{user selection} phase).
 In the second phase (lines 9 to 12), we determine which model to run for this user (i.e., the \emph{model selection} phase).
 The model selection phase is straightforward --- we choose the model with respect to the single-tenant GP-UCB criterion. (Compare lines 9 to 12 in Algorithm~\ref{alg:mc-general} with lines 3 to 5 in Algorithm~\ref{alg:gp-ucb}.)
-The user selection phase is more sophisticated as we shall discuss next.
+The user selection phase is more sophisticated.
 
 
 
-One idea for user selection is to compare the best models (based on Equation~\ref{eq:gp-ucb}) from different users and pick ``the best of the best.''
+One idea for user selection is to compare the best models from different users and pick ``the best of the best.''
 However, in what sense are the best models comparable?
 To understand the subtlety here, consider two models $M_1$ and $M_2$ from two users.
 Suppose that, at a certain time step $t$, the mean accuracy of $M_1$ and $M_2$ are 0.9 and 0.7, respectively.
 Moreover, assume that the Gaussian variances of $M_1$ and $M_2$ are the same.
-The UCB criterion (Equation~\ref{eq:gp-ucb}) will then favor $M_1$ over $M_2$.
+The UCB criterion will then favor $M_1$ over $M_2$.
 In the single-tenant case this makes perfect sense: $M_1$ is a clear win over $M_2$.
 In the multi-tenant case this is perhaps indefinite, because it is possible that $M_1$ is working on an easy dataset whereas $M_2$ is working on a hard one.
-Therefore, the mean accuracy in the UCB criterion (i.e., the $\mu$ part in Equation~\ref{eq:gp-ucb}) is not a reliable indicator of the potential model improvement when comparing different users.
+Therefore, the mean accuracy in the UCB criterion (i.e., the $\mu$ part in single-tenant GP-UCB) is not a reliable indicator of the potential model improvement when comparing different users.
 Based on this observation, we choose to omit the mean accuracy in the UCB criterion and focus on the observed variance.
 
 This leads to the specific user selection strategy illustrated in lines 6 to 8 of Algorithm~\ref{alg:mc-general}.
 In line 6, we first compute more accurate regrets for users with new observations.
-In fact, except for the initialization stage (lines 1 to 4) where more than one user has new observation, there is only one user with new observation at each subsequent time step, as we only schedule one user at a time.
-We define $\tilde{\sigma}_t^i$ to be the \emph{empirical variance} observed for the user $i$ at the time $t$, and define 
-\begin{equation}\label{eq:emp-bound}
-b_t^i=y_t^i + \tilde{\sigma}_t^i
-\end{equation}
-to be the \emph{empirical confidence bound} (to distinguish it with the upper confidence bound).
-Using the above notation, the refinement formula in line 6 can then be rewritten as
-\begin{equation}\label{eq:emp-bound-recurrence}
-b_{t_i-1}^i=\min\left\{B_{t_i-1}(a^i_{t_i-1}), \min_{t'<t_i-1} b^i_{t'}\right\}.
-\end{equation}
-Clearly, Equation~\ref{eq:emp-bound-recurrence} represents a recurrence relation on the empirical confidence bounds.
+Clearly, line 6 represents a recurrence relation on the empirical confidence bounds.
 Assuming that the user $i$ was scheduled at the time $t-1$, the empirical confidence bound for the user $i$ after the time $t-1$ (i.e., at the time $t$) is either the updated upper confidence bound $B_{t-1}$
 or the minimum empirical confidence bound before the time $t$, whichever is smaller (i.e., tighter).
-Intuitively, the empirical confidence bound tries to tighten the upper confidence bound by utilizing the observed reward more directly: The upper confidence bound criterion merely uses the observations to update the parameters of the Gaussian process, which may result in slower convergence (or equivalently, larger/looser bound) if the observations are distant from the Gaussian priors.
-By Equation~\ref{eq:emp-bound}, the empirical variance is then computed by subtracting the observed reward from the empirical confidence bound.
-
+Intuitively, the empirical confidence bound tries to tighten the upper confidence bound by utilizing the observed reward more directly: The UCB criterion merely uses the observations to update the parameters of the Gaussian process.
 In lines 7 and 8, we further use the empirical variances of the users to determine which one to schedule next.
-(As we have noted above, variances, but not means, matter when contrasting different users.)
 Specifically, we first decide a set of candidate users whose empirical confidence bounds are above the average, and then pick one user from the candidates.
-The criterion we use to choose the candidates is based on somewhat technical reasons: We want to bound the regret rate of Algorithm~\ref{alg:mc-general}.
-This will become clear in our theoretical study, though the intuition is not difficult to explain.
-{\color{red}
-By choosing a user with confidence bound above the average, we can reduce the time-averaging regret defined in Equation~\ref{eq:time-avg-regret}.
-It is interesting that the regret bound remains the same regardless of the rule for picking a user from the candidates, though in practice different rules may make a difference.
-For example, picking the user with the maximum empirical variance may be better than randomly picking a user.
-In our experiments, we pick the user with the maximum \emph{expected improvement} from the candidates, which shows good performance.
-Nevertheless, the existence of an optimal strategy in the practical sense remains as an open question.
-}
 
-One might wonder if we can just replace the empirical variance by the Gaussian variance as in the UCB criterion (i.e., replace $\tilde{\sigma}$ by $\sigma$).
-{\color{red} Theoretically, the answer is yes and we can obtain similar regret bound.}
-However, as we have pointed out, in practice using the empirical variance can give much better performance --- the empirical confidence bound by directly leveraging the observation can be much tighter compared with the upper confidence bound.
-A more surprising fact here is that, if we only care about the theoretical regret bound, then the user selection phase is unimportant --- using a round-robin strategy will give the same regret bound!
-We next discuss this by-product in more detail by presenting a theoretical analysis of Algorithm~\ref{alg:mc-general}.
+\vspace{-0.5em}
+\paragraph*{Strategy for Line 8}
+By choosing a user with confidence bound above the average, we can reduce the time-averaging regret.
+It is interesting that the regret bound remains the same regardless of the rule for picking a user from the candidates (line 8), though in practice different rules may make a difference.
+For example, picking the user with the maximum empirical variance may be better than randomly picking a user. In \eml, we 
+use a rule that picks the user with the maximum
+gap between the largest upper confidence bound
+and the best accuracy so far.
+Nevertheless, the existence of an optimal rule in the practical sense remains as an open question.
 
-\paragraph*{Theoretical Analysis}
+\vspace{-0.5em}
+\paragraph*{Theoretical Analysis} We
+can prove the following regret bound
+for the \greedy algorithm.
 
-{\color{red} Multi-tenant, cost-aware case}
-
-% Given $\delta\in (0,1)$ and a sequence of positive numbers $\{c_k^i\}$,
-% consider the following optimization problem
-% \begin{equation}
-%   \label{eq:beta-multi}
-%   \text{minimize}\quad \max_{t\in [T]}~\beta^i_t,
-% \end{equation}
-% subject to
-% \[
-%   \sum_{t=1}^T\sum_{i=1}^n\sum_{k = 1}^{K^i} e^{-\frac{\beta^i_t}{2c^i_k}}\le \delta.
-% \]
-
+\vspace{-0.5em}
 \begin{theorem}
   \label{thm:multi-cost}
   Given $\delta\in (0,1)$ and set $\beta_t^i = 2c^\ast \log\left[\frac{\pi^2 n K^\ast t^}{6\delta}\right]$ with $c^\ast = \max_{i\in [n], k\in [K^i]}\{c^i_k\}$ and $K^\ast = \max_{i\in [n]}\{K^i\}$. Then the
-  cumulative regret of Multi-tenant GP-UCB is bounded above by
+  cumulative regret of Multi-tenant GP-UCB is bounded  by
   \[
     n \sqrt{T}\sqrt{\sum_{i=1}^n I_i([T(i)])}
   \]
@@ -1144,10 +1258,10 @@ We next discuss this by-product in more detail by presenting a theoretical analy
     I_i([T(i)]) & =  \frac{4c^\ast \beta^\ast}{\log(1 + (\sigma^\ast)^{-2})}\\
     &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2}(\sigma^i_{t-1}(a^i_{t}))^2\right),
   \end{align*}
-  with $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$  and $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$, and $T(i)$ is defined in \eqref{eq:T(i)}.
+  with $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$  and $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$, and $T(i)$ is defined in Theorem~\ref{thm:rr}.
 \end{theorem}
 
-It is observed that $I_i([T(i)])$ is proportional to the information gain for each user $i$. In particular, if the kernel function or covariance matrix is linear (see
+$I_i([T(i)])$ is proportional to the information gain for each user $i$. In particular, if the kernel function or covariance matrix is linear (see
   Theorem 5 in \cite{SrinivasKKS10}), then for each $i\in [n]$, the
   order of $I_i([T(i)])$ is at most $\log(|T(i)|)$. Since
   \[
@@ -1174,10 +1288,10 @@ One problem of Algorithm~\ref{alg:mc-general} is that it may enter a \emph{freez
 That is, after a certain time step (usually at the very end of running the algorithm), the candidate set of users will remain stable.
 The algorithm will stick to these users forever and therefore make no further progress if the optimal models for these users have been found.
 The reason for this phenomenon is that the empirical variance, though improved over the Gaussian variance in the UCB criterion, is still an estimated bound rather than the true gap between the observed and optimal model quality.
-Therefore, it is rough. When the observed model quality is close to the optimal quality, this estimated bound is no longer reliable as an indicator of the true gap.
+When the observed model quality is close to the optimal quality, this estimated bound is no longer reliable as an indicator of the true gap.
 Consequently, the empirical variances for the users remain almost constant, which results in a stable candidate set.
 
-To overcome this barrier, we further propose a hybrid approach.
+To overcome this problem, we further propose a hybrid approach.
 When we notice that the candidate set remains unchanged and the overall regret does not drop for $s$ steps,
 we know that the algorithm has entered the freezing stage.
 We then switch to the round-robin user selection strategy so that the algorithm can leave the freezing stage and make progress on the other users.
@@ -1185,8 +1299,33 @@ We used this hybrid approach in our experimental evaluation (Section~\ref{sec:ex
 As we have just discussed, this hybrid approach observes the same regret bound as Algorithm~\ref{alg:mc-general} because using a round-robin user selection strategy instead won't change the regret bound.
 
 
+\subsection{Discussion on Limitations}
 
-\newpage
+As the first attempt
+of the multitenant model selection problem,
+this paper has the following limitations.
+From the theortical perspective, the regret bound
+is not yet theortically optimal and tight.
+From the practical perspective,
+the current framework only supports the case where
+the whole GPU pool are treated as a single device.
+With our current scale (29 GPUs), this is not
+a problem as we can achieve linear scale up
+with all GPUs to train a single model. However, as our service grows
+rapidly, we need to extend our current framework
+to be aware of multiple devices in the near future.
+Another limitation is that our
+analysis focuses on GP-UCB and it is not clear
+how to integrate other algorithms such as
+GP-EI and GP-PI into a multi-tenant 
+framework. Last, we define the global
+happiness of all users as the sum 
+of their regrets. It is not clear how to
+integrate hard rules such as ``deadline''
+associated with each user and design
+algorithms for other aggregation functions.
+
+
 
 \section{Experiments}\label{sec:experiments}
 
