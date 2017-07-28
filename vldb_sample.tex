@@ -9,7 +9,7 @@
 \usepackage{color}
 
 \usepackage{url}
-
+\usepackage{enumitem}
 
 \usepackage{algorithm}
 \usepackage{algorithmic}
@@ -17,6 +17,10 @@
 \renewcommand{\algorithmicensure}{\textbf{Output:}}
 
 \newcommand{\eml}{\texttt{ease.ml}\xspace}
+\newcommand{\rr}{\textsc{RoundRobin}\xspace}
+\newcommand{\hybrid}{\textsc{Hybrid}\xspace}
+\newcommand{\greedy}{\textsc{Greedy}\xspace}
+
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{conjecture}[theorem]{Conjecture}
@@ -71,7 +75,7 @@
 %The Multi-tenant Case}
 
 
-\title{Multi-tenant Model Selection in ease.ml}
+\title{Ease.ml: Towards Multi-tenant Machine Learning Clouds}
 %: \\
 %Towards ``Machine Learning as a Service''}
 
@@ -99,13 +103,6 @@ allocation strategy that maximizes the global happiness of all
 of our users?}
 
 
-%From a single user's perspective, \eml is not
-%dissimilar to a declarative
-%machine learning, or ``AutoML'', system that provides 
-%automatic support
-%for model selection and hyperparameter tuning.
-
-
 Resource allocation is a critical yet subtle issue in this multi-tenant scenario, as we 
 have to balance between efficiency and fairness.
 We first formalize the problem that we call {\em multi-tenant model selection}, 
@@ -122,21 +119,8 @@ be up to 9.8$\times$ faster to achieve the same global quality
 for all users compared with %strong baselines 
 two popular heuristics used by our users before \eml.
 
-%
-%often by 
-%a significant margin.
-
-
-%
-%and (2) structured data classification with
-%Azure machine learning studio.
-%On these use cases, \eml is able to outperform
-%approaches popularly used by
-%state-of-the-art resource managers 
-%designed for more general workloads by up to XXX$\times$.
 \end{abstract} 
 
-%\vspace{-1em}
 \section{Introduction}\label{sec:introduction}
 
 Recent decade has witnessed the increasingly 
@@ -189,11 +173,6 @@ resources fiercely; this decentralized management strategy failed in chaos in ju
 {\bf Failed Experience 2.} We then resorted to classic resource
 managers and used \texttt{Slurm} for users to submit 
 their jobs. 
-%Each user is assigned with a priority
-%and a fixed quota, and the resource manager
-%schedules users' job. Only when there are freely
-%available resources a user can get resources above 
-%her quota. 
 Although this strategy isolates
 users from competing for resources, it poses a
 new problem for effective resource utilization.
@@ -216,13 +195,13 @@ they would make much better use of the computation time.
 
 \vspace{0.3em}
 Motivated by these experiences, we design
-\eml, an automatic resource manager for multi-tenant machine learning workloads.
+\eml, a declarative machine learning service platform we build for our local collaborators at ETH Zurich,
+which employs an automatic resource manager for multi-tenant machine learning workloads.
 Compared with existing multi-tenant 
 resource managers~\cite{XXX,XXX,XXX,XXX,XXX,XXX,XXX,XXX}, \eml
 is aware of the underlying workload and is able to
 integrate knowledge about machine learning
 to guide the exploration process more effectively.
-Specifically, we formalize the resource allocation problem as what we call ``{\em multi-tenant model selection}.''
 Compared with existing systems mainly built for the
 single-tenant case
 such as Auto-WEKA~\cite{XXX}, 
@@ -231,42 +210,32 @@ designed to allow multiple users sharing the same
 infrastructure and tries to balance and optimize for
 the ``global happiness'' of all users.
 
-
+\vspace{-0.5em}
 \paragraph*{Challenges}
 
 Automatic model selection is crucial for declarative machine learning services 
 and has been studied intensively and extensively in the literature.
 To enable automatic model selection for multiple users
 competing for a shared pool of resources,
-we started from two lines of classic research:
-(1) classic single-tenant model selection with 
+we started from two previous lines of prior arts:
+(1) single-tenant model selection using 
 \emph{multi-armed bandits}~\cite{XXX,XXX,XXX};
-and (2) classic {\em multi-task} Bayesian optimization
-and Gaussian Process~\cite{XXX,XXX,XXX} dealing
-with multiple players.
-When extending these approaches to \eml's multi-tenant case, 
-we faced two major challenges:
+and (2) {\em multi-task} Bayesian optimization
+and Gaussian Process~\cite{XXX,XXX,XXX}.
+When we tried to extend these approaches to the particular multi-tenant scenario that \eml was designed for,
+we faced two challenges.
 
 \noindent
-{\bf (Optimization Objective)} The single-tenant optimization objective 
-is simple: Find the best model for the user as soon as 
-possible (i.e., to minimize user's {\em regret} accumulated over time). 
-When extending this objective to multiple players,
-previous work proposes different objectives for different tasks:
-Take Swersky et al.'s recent work~\cite{XXX} for example ---
-the objectives and algorithms it designed for 
-(1) k-fold cross validation (each fold
-is a ``tenant'') and (2) using cheaper dataset 
-to help expensive dataset (each dataset is a ``tenant'')
-are different.
-Unfortunately, as we will discuss in Section~\ref{sec:relatedwork},
-both objectives are not suitable for \eml's multi-tenant
-scenario. The first challenge is to design a reasonable 
-objective for multiple users and design novel
-algorithms for such an objective. Moreover,
-we hope that the algorithms we designed should have rigorous
-theoretical guarantee similar to the single-tenant case.
-  
+{\bf (Optimization Objective)}
+The optimization objective of single-tenant model selection is clear: Find the best model for the user as soon as 
+possible (i.e., minimize the user's {\em regret} accumulated over time).
+However, the optimization objective becomes unapparent once we turn to the multi-tenant case.
+Previous work has proposed different objectives~\cite{XXX}.
+Nevertheless, none of them can fit \eml's application scenario (see Section~\ref{sec:relatedwork}).
+Therefore, our first challenge is to design an appropriate objective for \eml that captures the intuitive yet vague notion of ``global happiness'' of all users, and then design 
+an algorithm for this new objective.
+ 
+
 \noindent
 {\bf (Heterogeneous Costs and Performance)} Most
 existing single-tenant model selection
@@ -274,189 +243,110 @@ existing single-tenant model selection
   a given model. This is important as models with
   vastly different costs may have similar performance 
   on a particular dataset. Therefore, any multi-tenant
-  model selection algorithm we propose should also
-  be aware of costs. This makes the integration and
-  theoretical analysis of costs even more complicated
-  because models with 
-  different costs now may also have different quality for 
-  different users. 
+  model selection algorithm that is useful in practice should also
+  be aware of costs.
+  Previous work on cost-aware model selection algorithms, resorts to various heuristics to integrate the cost~\cite{XXX}.
+  Moreover, theoretical analysis of many state-of-the-art algorithms is usually undergone a ``cost-oblivious'' setting where costs are neglected.
+  The question of integrating costs into model selection algorithms while retaining desirable theoretical properties remains open.
+  Our second challenge is to develop cost-aware multi-tenant algorithms with rigorous theoretical properties.
   
-
-
-
-  %his implies that we have to sacrifice fairness, namely, we cannot ensure uniform regret reduction when multiple users are involved. Based on this observation, we propose to minimize the {\em total} regret for {\em all} users. Intuitively, this is an unfair strategy, as the system will bias towards users with high ``potential'' in terms of the performance improvement of the models they are running. Nevertheless, the system achieves optimal efficiency in resource allocation, as the system always picks the next user with the highest performance improvement. In the long run, this strategy can minimize the total time spent on identifying best models for all users and thus maximize resource utilization at any given time.
-
 \vspace{-1em}
 \paragraph*{Summary of Technical Contributions}
-To address the above challenges, our solution is a novel
-framework for multi-tenant, cost-aware model selection
-integrated into \eml, a declarative machine learning
-service platform we build for our local collaborators
-at ETH Zurich.
-We summarize our contributions as follows.
+
+
+With the above challenges in mind, we develop a novel framework towards multi-tenant, cost-aware model selection that has been integrated into \eml. We summarize our contributions as follows.
 
 \noindent
 {\bf C1. (System Architecture and Problem Formulation)}
-To our best knowledge, \eml is one of the very first systems 
-of its kind and our first contribution is the system design and the formulation
-of the core technical problem to build \eml. 
-\eml's design goal is two fold --- (1) provide an abstraction
-to enable more effective model exploration for our users, and 
-(2) manage the shared infrastructure to enable more efficient
-resource utilization of the exploration process 
-for {\em all}, instead of, {\em one} of our users.
-
-From user's perspective, \eml provides a simple high-level 
-language to our user. In \eml, the user thinks about 
-machine learning as a {\em arbitrary function approximator}.
-To specify such an approximator, the users provides the
+Our first contribution is the architecture of \eml and the formulation of its core technical problem.
+To the best of our knowledge, \eml is one of the first systems that provides declarative machine learning services.
+In \eml, user thinks about machine learning as an {\em arbitrary function approximator}.
+To specify such an approximator, user provides the
 system (1) the size of the input, (2) the size of the output,
 and (3) pairs of examples the function aims to approximate.
 For example, if the user wants to train a classifier
-for RGB images into 3 classes, she would submit a job like
-\vspace{-1em}
+for RGB images into 3 classes, he/she would submit a job like
+\vspace{-0.5em}
 \[
 \texttt{Input = [256, 256, 3]
         Output = [3]}.
 \]
 \eml then automatically matches all {\em consistent} machine
 learning models (e.g., AlexNet, ResNet-18, GoogLeNet, etc.) 
-that can be used for users' application, and
-explore all these models for users. Whenever a new model
-finished running, \eml returns the model to the user.
+that can be used for this job and explore all these models.
+Whenever a new model finished running, \eml returns the model to the user.
 Despite the simplicity of this abstraction, more than 70\% of
-our users' applications can be build in this way.
+our users' applications can be built in this way.
 
-From infrastructure's perspective, \eml then contains an
-automatic scheduler to prioritize the execution of
-different models for different users. 
-We formalize
-this as a technical problem that 
-we call {\em multitenant model selection}.
+
+
+The core of the \eml architecture is an automatic scheduler that prioritizes the execution of different models for different users.
+We further formalize the scheduling problem as what we call {\em multi-tenant model selection}.
+Although similar problems have been explored in previous work~\cite{XXX}, to the best of our knowledge we are the first that formulate the multi-tenant model selection problem in the context of multi-tenant machine learning platform.
+The consequence is that we come up with a new optimization objective based on real user requirements in practice.
+
 
 \noindent
-{\bf C2. (Multitenant Multi-armed Bandits)} Our second contribution
-is to provide the first algorithm for the multitenant model selection
-problem. In this paper, we develop a novel family of algorithms by extending 
-classic \texttt{GP-UCB} algorithm for a singletenant model
-selection to multitenant cases. 
-From a technical point of view, our framework 
-adopts a two-phase approach.
-At each time step, the algorithm first determines the 
+{\bf C2. (Multi-tenant Model Selection Algorithms)} Our second contribution
+is a novel algorithm for the (new) multi-tenant model selection problem we have formulated, by extending 
+the classic GP-UCB algorithm, which is tailored for single-tenant, cost-oblivious model
+selection, to multi-tenant, cost-aware model selection.
+Our proposed algorithm adopts a two-phase approach.
+At each time step, it first determines the 
 best model to run next for each user by
-estimating the ``potential on quality improvement for each model'';
-it then picks one user with the highest potential in terms of the estimated quality improvement.
-For the first phase, we develop a cost-aware variant of the 
+estimating the ``potential on quality improvement'' for each model.
+It then picks one user with the highest potential in terms of the estimated quality improvement.
+In the first ``model-picking'' phase, we develop a cost-aware variant of the 
 standard GP-UCB algorithm for selecting the best model of 
-each user. In the second phase, we develop a 
-simple, but novel, criterion to
-decide the best user to schedule next.
-We analyze the theoretical properties for different
-variants of the proposed family of algorithms,
-and further designed a hybrid algorithm 
-with explicit consideration
-of the varying accuracy of the underlying 
-estimator throughout execution.
+each user. In the second ``user-picking'' phase, we develop a simple, but novel, criterion to decide the best user to be scheduled next.
 
-From theortical perspective, we proved a rigorous 
-multi-tenant regret bound. 
-\textcolor{red}{For multitenant model selection problem 
-with $K$ candidate models and $n$ users,
-under standard technical assumptions and standard choices of
-kernels for the underlying Gaussian process,
-the global total regret among all
-users are bounded by 
+We study the theoretical properties of the proposed algorithm as well as a variant that replaces the criterion in the ``user-picking'' phase by a round-robin strategy.
+In summary, we proved rigorous regret bounds for both algorithms: \textcolor{red}{For the multi-tenant model selection problem 
+with $K$ models and $n$ users, 
+the total regret $R_T$ of all users is bounded by 
 $
-R_T < C n^{3/2}\sqrt{T\log \frac{T}{n}}
+R_T < C n^{3/2}\sqrt{T\log \frac{T}{n}}, 
 $
 where $T$ is the total execution time
-and $C$ is a constant. This achieves
-the desired property in classic analysis for
-the single-tenant case, namely, {\em no-regrets}, 
-i.e., $R_T/T \rightarrow 0$.
+and $C$ is a constant.
+This is in line with the best known bound for the standard GP-UCB algorithm.
+It implies that both algorithms are \emph{regret-free}, i.e., $R_T/T \rightarrow 0$, which is a desired property for any model selection algorithm in practice.
 }
 
-\vspace{-0.5em}
+We further analyze the strength and weakness of both algorithms, and design a hybrid algorithm with explicit consideration
+of the varying accuracy of the underlying estimator employed by the ``user-picking'' criterion.
+The hybrid algorithm observes the same regret bound, though it outperforms both algorithms.
+
+
+\vspace{0.5em}
 \noindent
-{\bf C3. (Evaluation)} Our third contribution is an intensive
-evaluation of \eml on both synthetic data and one current
-service we are providing to our users. The service 
-we are providing is automatic image classification 
-with deep neural networks ---  When
-the user submit jobs with the schema
+{\bf C3. (Evaluation)} Our third contribution is an extensive
+evaluation of \eml on both synthetic data and a real service that we are currently providing to our users: automatic image classification 
+with deep neural networks.
+When a user submits a job with the schema
 that maps a 3-dimensional tensor to
-a vector \eml automatically matches the users' job with eight
+a vector, \eml automatically matches the job with eight
 different neural network architectures, including
 NIN~\cite{XXX}, GoogLeNet~\cite{XXX}, ResNet-50~\cite{XXX}, AlexNet~\cite{XXX},
 BN-AlexNet~\cite{XXX}, ResNet-18~\cite{XXX}, VGG-16~\cite{XXX},
 and SqueezeNet~\cite{XXX}. We collect twenty 
 data sets (users) and compare
 \eml's scheduler with popular heuristics 
-used by our users before we provide them
-\eml and classic scheduling strategies such
-as round robin and random scheduling. We show that
-\eml is able to outperform
+used by our users (prior to the availability of \eml), as well as variants of our algorithm that leverage classic scheduling policies in the ``user-picking'' phase, such as round robin or random scheduling.
+We show that \eml is able to outperform
 these workload-agnostic schedulers
 by up to 9.8$\times$. On synthetic data sets
 we observe similar behaviors and speedups.
 
 \vspace{-1em}
-\paragraph*{Limitations}
-As the first attempt
-of the multitenant model selection problem,
-this paper has the following limitations.
-From the theortical perspective, the regret bound
-is not yet theortically optimal and tight.
-From the practical perspective,
-the current framework only supports the case where
-the whole GPU pool are treated as a single device.
-With our current scale (29 GPUs), this is not
-a problem as we can achieve linear scale up
-with all GPUs to train a single model. However, as our service grows
-rapidly, we need to extend our current framework
-to be aware of multiple devices in the near future.
-Another limitation is that our
-analysis focuses on GP-UCB and it is not clear
-how to integrate other algorithms such as
-GP-EI and GP-PI into a multi-tenant 
-framework. Last, we define the global
-happiness of all users as the sum 
-of their regrets. It is not clear how to
-integrate hard rules such as ``deadline''
-associated with each user and design
-algorithms for other aggregation functions.
-
-\vspace{-1em}
 \paragraph*{Overview}
 The rest of this paper is organized as follows.
 We describe the system architecture of \eml in Section~\ref{sec:architecture}.
-We then formalize the multi-tenant model selection problem and present our solution, as well as a detailed theoretical analysis, in Section~\ref{sec:multitenant}.
-We report experimental evaluation results in Section~\ref{sec:experiments}, summarize related work in Section~\ref{sec:relatedwork}, and conclude the paper in Section~\ref{sec:conclusion}.
+As preliminaries, we present the single-tenant model selection problem, as well as a cost-aware variant of the standard GP-UCB algorithm, in Section~\ref{sec:singletenant}.
+We then formalize the multi-tenant model selection problem and present our solution and theoretical analysis, in Section~\ref{sec:multitenant}.
+We report experimental evaluation results in Section~\ref{sec:experiments}, summarize related work in Section~\ref{sec:relatedwork}, and conclude in Section~\ref{sec:conclusion}.
 
 
-
-
-%The design of each of these two phases need to take
-%into consideration the unavoidable trade-off between efficiency and fairness under multi-tenancy, though perfect fairness is impossible to achieve.
-%Our optimization goal therefore can be viewed as one extreme in this efficiency-fairness trade-off spectrum, where we optimize for efficiency yet neglect fairness.
-%It is likely that a user may have to wait for a long time between consecutive scheduling of his/her task if its performance improvement across 
-%different runs is relatively small compared with the other users.
-%In the worst case, a dominant user may completely sabotage the fairness of the system.
-%We can further improve fairness by incorporating additional mechanisms into our framework.
-%For example, we can increase the chance of being scheduled for a user that has been waiting for a while.
-%An interesting question here is whether the regret bound remains the same.
-%Nevertheless, these possible extensions are beyond the scope of the current paper, and we leave them for future exploration.
-
-%At a first glance, this seems quite straightforward.
-%The devil is in the detail.
-%To claim that a solution to the bandit problem is more than just a heuristic (e.g., at each step randomly pick an arm to play), one may want to show that the solution exhibits certain theoretical properties.
-%A desired property in the single-tenant case is that an algorithm should be ``regret-free'' in the long run, namely, the time-averaging regret goes to 0 as we continue playing the arms of the bandit.
-%Our theoretical study confirms that this property remains true in the multi-tenant, cost-aware case with the algorithms we propose.
-%Another desired property is that the time-averaging regret should vanish as soon as possible.
-%In the spirit of previous work on bounding the regret rate, we further show that our regret bound for the multi-tenant, cost-aware case matches the best known bound for the single-tenant case.
-%A somewhat surprising result we find in our theoretical study is that the regret bound is somehow \emph{robust} to the criterion of picking the next user in each step.
-%For example, one can simply use a round-robin strategy and we show that the same regret bound holds.
-%Nevertheless, the regret bound is mainly of theoretical interest. In our experiments we show that our proposed algorithms outperform round-robin, often by a significant margin, on both real and synthetic data.
 
 
 
@@ -480,9 +370,7 @@ We report experimental evaluation results in Section~\ref{sec:experiments}, summ
 \end{figure}
 
 
-%\section{Preliminaries}\label{sec:architecture}
-
-%\subsection{System Architecture of ease.ml}
+\newpage
 \vspace{-1em}
 \section{System Architecture} \label{sec:architecture}
 
@@ -615,7 +503,7 @@ to get rid of noisy labels introduced by weak/distant supervision.
 \noindent
 {\textbf{3.~\texttt{infer}}.} The \texttt{infer} operator
 takes as input an input object and output an output object
-using the \textbf{{\em best model learned so far}}.
+using the {\em best model learned so far}.
 
 \paragraph*{Automatic Model Exploration}
 
@@ -720,73 +608,316 @@ application motivated this feature.}
 \end{figure}
 
 
-%\subsection{Single-tenant Model Selection}
 
-%~
-%\newpage
-%%~
-%\newpage
+\section{Single-tenant Model Selection} \label{sec:singletenant}
+
+We now focus on the model selection subsystem in \eml. In this section,
+we discuss the single-tenant case, in which a single user needs to
+choose from $K$ different models. We first present background on
+the classic, cost-oblivious, GP-UCB algorithm and then present a simple
+twist for a cost-aware GP-UCB algorithm. Despite the simplicity of
+this twist, the resulting cost-aware algorithm forms a basic building
+block for the multi-tenant setting.
+
+\vspace{-1em}
+\paragraph*{Problem Formulation} We treat
+model selection as a multi-armed bandit problem.
+Each algorithm corresponds to an \emph{arm} of 
+the bandit, whereas the observed evaluation result of 
+the algorithm corresponds to the \emph{reward} of playing the conceivable arm.
+A common optimization criterion is to minimize the cumulative
+\emph{regret}.
 
 
-%\newpage
-%~
-%\newpage
+Formally, let there be $K$ arms and $[K]$ be the set of
+all arms. Let $x_{a_t, t}$ be the reward of playing the arm $a_t\in[K]$
+at time $t$ - following the distribution $\mu_{a_t}$ where $a_t \in [K]$ denotes the arm index selected as time $t$. Let $\mu_*=\max_{k\in[K]}\mathbb{E}(\mu_k)$ be the ``best'' solution in the expectation sense that is unknown to the algorithm.
+The {\em instantaneous} regret at time $t$ if we
+play the arm $a_t$ is $r_t=\mu_*-\E(x_{a_t, t})$ or equivalently $r_t = \mu_*-\mu_{a_t}$.
+The {\em cumulative} regret up to time $T$ is defined as
+\[
+R_{T}=\sum\nolimits_{t=1}^{T}r_t = \sum\nolimits_{t=1}^{T} \mu_*-\E(x_{a_t, t}) .
+\]
+For different strategies of choosing different arms at
+each time $t$, they incur different cumulative regret.
+One desired property of the bandit problem is 
+that asymptotically there is no cumulative regret, i.e.,
+$\lim\nolimits_{T\to\infty}R_T/T=0.$ The performance
+of a given strategy can be measured as the {\em convergence rate}
+of the cumulative regret.
 
-\section{Multi-tenant Model Selection}\label{sec:multitenant}
 
-Although the single-tenant model selection problem has been extensively studied in the literature, the multi-tenant model selection problem is new as far as we know.
-It should not be a sheer surprise, as multi-tenancy only comes into the picture when machine learning is offered as a service that is hosted by a shared infrastructure, which did not happen until quite recently.
+\vspace{-1em}
+\paragraph*{Discussion: Relation to Model Selection} 
+In our model selection setting, we treat each arm as
+a model and the reward $x_{a_t, t}$ is the {\em accuracy} of
+the model $a_t$ at time $t$. The best model that the user
+has at time $t$ has the quality $x_t = \max_t x_{a_t, t}$. We
+define a slightly different version of {\em regret} that is
+directly associated with the user experience in \eml:
+\[
+R_{T}' = \sum\nolimits_{t=1}^{T} \left(\mu_* -  \mathbb{E}(\max_t x_{a_t, t})\right).
+\]
+Intuitively, this means that the user experience of a single
+user in \eml relies not on the quality of model the system
+gets at time $t$, but the best model so far up to time $t$ because
+it is the ``best model so far'' that \eml is going to use 
+to serve the \texttt{infer} operator. To
+captures the relation between the ``\eml regret'' $R_T'$ and 
+the classic cumulative regret $R_T$, observe that
+\[
+R_T' \leq R_T~~~~~\forall t, a_1,...,a_t.
+\]
+Because we are only interested in
+the upper bound of $R_T'$, for the rest of this paper,
+we will always try to find the upper bound for 
+the standard cumulative regret $R_T$ instead of 
+$R_T'$ directly.
 
-In this section, we give a first formulation to the problem and propose a solution to it.
-Our problem formulation is an extension to the classic view of model selection as a bandit problem.
-Basically, we extend the bandit problem from the standard single-tenant, cost-oblivious (STCO) setting to the multi-tenant, cost-aware (MTCA) setting.
-Our solution is then based on extending the well-known STCO GP-UCB algorithm, a technique that combines the UCB (shorthand for ``upper confidence bound'') heuristic with Bayesian optimization, with the goal of minimizing the total regret of all users.
-We further present a detailed theoretical analysis and show that our solution can achieve a regret bound in line with the best ones known for the STCO GP-UCB algorithm.
 
-\subsection{Preliminaries}
 
-Model selection can be viewed as a multi-armed bandit problem.
-Each algorithm corresponds to an \emph{arm} of the bandit, whereas the observed evaluation result of the algorithm corresponds to the \emph{reward} of playing the conceivable arm.
-A common optimization criterion is to minimize the average \emph{regret} as time goes by.
+\begin{algorithm}[t!]    
+\scriptsize
+\caption{Single-tenant, cost-oblivious GP-UCB}          % give the algorithm a caption
+\label{alg:gp-ucb}                           % and a label for \ref{} commands later in the document
+\begin{algorithmic}[1]                    % enter the algorithmic environment
+   \REQUIRE GP prior $\mu_0$, $\sigma$, $\Sigma$, and $\delta\in (0,1)$
+   \ENSURE Return the best algorithm among all algorithms in $a_{[1:T]}$
+   \STATE Initialize $\sigma_0 = \text{diag}(\Sigma)$
+   \FOR {$t=1,2,\cdots, T$}
+   \STATE $\beta_t \leftarrow \log (Kt^2/\delta)$\\
+   \STATE $a_t \leftarrow \argmax_{k\in [K]}\mu_{t-1}(k) + \sqrt{\beta_t}\sigma_{t-1}(k)$\\
+   \STATE Observe $y_t$ by playing bandit $a_t$.\\
+   \STATE $\mu_t(k) = \Sigma_t(k)^\top (\Sigma_t + \sigma^2 I)^{-1} y_{[1:t]}$\\
+   \STATE $\sigma_t^2(k) = \Sigma(k, k) - \Sigma_t(k)^\top(\Sigma_t + \sigma^2 I)^{-1} \Sigma_t(k)$
+   %\STATE $\cA_K = \text{arg}\max_{k \in [K]} \mu_t(k) + \sqrt{\beta_t} \sigma_{t}(k)$
+   \ENDFOR
+\end{algorithmic}
+\vspace{-0.5em}
+\hrulefill\\
+\vspace{0.5em}
+\textbf{Notation}:
+\begin{itemize}[noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt]
+\item $[K] = \{1, 2, \cdots, K\}$.
+\item $y_{[1:t]} = \{y_1, \cdots, y_t\}$.
+\item $\Sigma(i,j) = \Sigma_{i,j}$, for $i,j\in [K]$.
+\item $\Sigma_t(k) = [\Sigma(a_1, k), \cdots \Sigma(a_t,k)]^\top, k\in [K]$.
+\item $\Sigma_t = [\Sigma(i, j)]_{i,j\in a_{[1:t]}}$.
+\end{itemize}
+\end{algorithm}
 
-Formally, let $x_t$ be the reward of playing some arm $k\in[K]$ at time $t$, and let $x_{*,t}=\max\{x_{k,t}\}$ where $k\in[K]$.
-The {\em instantaneous} regret at time $t$ is then
-\begin{equation}\label{eq:instant-regret}
-r_t=x_{*,t}-x_t,
-\end{equation}
-whereas the {\em cumulative} regret up to time $T$ is defined as 
-\begin{equation}\label{eq:cumulative-regret}
-R_{T}=\sum\nolimits_{t=1}^{T}r_t.
-\end{equation}
-A desired property of a solution to the bandit problem is
-\begin{equation}\label{eq:regret-free}
-\lim\nolimits_{T\to\infty}R_T/T=0,
-\end{equation}
-namely, asymptotically there is no cumulative regret.
-
-\subsection{Problem Formulation}
-
-Suppose that we have $K$ candidate models/algorithms hosted by a shared machine learning infrastructure.\footnote{We will use ``models'' and ``algorithms'' exchangeably.}
-Consider a multi-tenant scenario where we have $n$ users and each user $i\in[n]$ has his/her own machine learning task represented by a dataset $D_i$.
-For a dataset $D$ (from a user), we use $\cA_k(D) \in \R$ to denote the performance (e.g., prediction accuracy) of $\cA_k$ on $D$ and $\cA(D) \in \R^K$ to denote the performance of all algorithms on $D$.
-The goal is to find out the best algorithm for $D$ with cost as low as possible.
-For simplicity, we assume that the outcome of applying an algorithm to $D$ is deterministic.
-Here, the cost of $D$ is defined as the overhead (e.g., time) of evaluating the algorithm ``once'' on $D$.
-For example, in the case of model section via hyper-parameter tuning, one evaluation could be trying one specific hyper-parameter combination within the whole search space.
-In the context selecting deep neural networks, one evaluation could be running one iteration of training under a given hyper-parameter setting.
-We can further introduce the notion of \emph{prior distribution} regarding the performance of each algorithm based on historical executions.
-Figure~\ref{fig:problem-formulation} presents a canonical view of the problem formulation in this general setting where (partial) knowledge about model performance is available.
-
-\begin{figure}[t]
+\begin{figure}
 \centering
-\includegraphics[width=0.9\columnwidth]{figures/multitenant}
-\vspace{-2em}
-\caption{A canonical view of the multi-tenant, cost-aware model selection problem we studied in this paper.}
-\label{fig:problem-formulation}
+\includegraphics[width=0.3\textwidth]{figures/rr_v_greedy}
+\vspace{-1em}
+\caption{Illustration of (1) Gaussian process and (2) the difference between \textsc{RoundRobin}
+and \textsc{Greedy}.}
+\label{fig:gpucb-intuition}
 \vskip -2ex
 \end{figure}
 
-\textbf{Extended Semantics for Regrets:} When moving to the MTCA setting, the definitions of instantaneous and cumulative regrets need to be extended.
+
+\vspace{-1em}
+\subsection{Cost-Oblivious GP-UCB}
+
+We start from the standard GP-UCB algorithm for single-tenant bandit problem.
+The key idea of GP-UCB is to combine Gaussian process (GP),
+which models the belief at time $t$ on the reward of arms $\{x_{k,{t+1}}\}$
+at the next timestamp, together with the upper confidence bound (UCB) 
+heuristic that chooses the next arm to play given the current belief.
+Algorithm~\ref{alg:gp-ucb} shows the algorithm.
+
+
+\vspace{-0.75em}
+\paragraph*{Gaussian Process} The Guassian Process component model
+the reward of all arms at the next timestamp $t$ as a random draw from a 
+Gaussian distribution
+$\mathcal{N}(\mu_t, \tilda{\Sigma})$ where $\mu_t \in \mathbb{R}^K$ is the
+mean vector and $\tilda{\Sigma} \in \mathbb{R}^{K \times K}$ is the covariance
+matrix. Therefore, the marginal probability of each arm is also a Guassian ---
+in Algorithm~\ref{alg:gp-ucb} (line 4, 6, and 7), the arm $k$ has distribution
+$\mathcal{N}(\mu_t(k), \sigma_t^2(k))$. The belief of the joint distribution
+keeps changing during the execution when more observations are made
+available. Line 6 and 7 of Algorithm~\ref{alg:gp-ucb} are used to
+update this belief given a new observation $y_t$ (line 5).
+Figure~\ref{fig:gpucb-intuition}(a) illustrates Gaussian Process, in which
+the blue surface is the real underlying function, and the orange
+surface is the current mean vector after multiple observations.
+
+
+\vspace{-0.75em}
+\paragraph*{Upper Confidence Bound (UCB)} The UCB heuristic
+chooses the next arm to play with the following heuristic. At time $t-1$,
+choose the arm with the largest $\mu_k + \theta\cdot\sigma_k$ where 
+where $\mu_k$ and $\sigma_k^2$ are the current mean and variance of the 
+reward distribution of the arm $k$ (Line 5 in Algorithm~\ref{alg:gp-ucb}). 
+This is the upper bound of the $\theta$-confidence interval.
+Despite its simplicity, it exhibits a good trade-off between \emph{exploration} and \emph{exploitation}.
+Intuitively, the UCB heuristic favors arms with high reward (for exploitation), \emph{and} high uncertainty (for exploration), which implies high risk but also high opportunity for gaining better reward.
+In practice, difference choice of $\theta$ has impact on the convergence rate.
+
+\vspace{-0.75em}
+\paragraph*{Theoretical Analysis}
+
+The well-known cumulative regret of UCB algorithm \cite{~} is $R_T \leq C\cdot K\log T$,
+where $C$ is some constant depending on the arm distribution. It is known to be one of the best upper bounds for multi-bandit problem. This bound has a minor dependence on $T$, but seriously depends on the distribution of all arms and the number of arms. This is mainly because the UCB algorithm does not consider dependence between arms. In order to make $R_T/T$ converge to zero, we have to try as least $K$ times. So the UCB algorithm requires to play all arms for once or twice in the initial step. To utilize the dependence among arms, previous work has extended the UCB algorithm with Gaussian process, where the dependence among arms can be measured by a Kernel matrix. The GP-UCB algorithm can achieve the regret
+\[
+R_T \leq C\cdot \sqrt{T\log T}
+\]
+where $C$ is some constant number, not depending on the distribution of arms. We can see that this bound does not depend on the number of arms, but a worse dependence on $T$. GP-UCB does not require to pull all arms once to initialized the algorithm. It can achieve a satisfactory average regret before all arms get pulled. GP-UCB is suitable for the variance of each arm is small, but the number of arms is large or pulling an arm is time-expensive.
+
+
+\subsection{Cost-aware Single-tenant GP-UCB}
+
+The previous algorithm does not consider the {\em cost} of playing an arm.
+In the context of model selection, this could correspond to the execution
+time of a given model. 
+As we will see, being aware of cost becomes even more important in the
+multi-tenant setting as it is one of the critiera to balance between
+multiple users.
+
+In this section, we extend the standard GP-UCB algorithm to a cost-aware version
+with a very simple twist. We then analyze the theoretical property of
+this cost-aware algorithm. Despite of the simplicity of the theoretical
+analysis and that we do not claim technical contribution for
+this analysis, nevertheless we did not see similar algorithm and analysis in the literature.
+
+\vspace{-0.75em}
+\paragraph*{A Simple Twist} Based on Algorithm~\ref{alg:gp-ucb}, the idea is simple. 
+We just replace Line 4 to the following (difference in red font)
+\[
+a_t \leftarrow \argmax_{k\in [K]}\mu_{t-1}(k) + \sqrt{\beta_t \textcolor{red}{/ c_k}}\sigma_{t-1}(k)
+\]
+where $c_k$ is the cost of arm $k$.
+This introduces a tradeoff between 
+cost and confidence --- everything being the equal, 
+slower models (larger $c_k$) has lower priority; however,
+if it has very large potential reward (larger $\sigma_{t-1}(k)$)
+even an expensive model is worth a bet.
+
+\vspace{-0.75em}
+\paragraph*{Theoretical Analysis}
+The following theorem bounds the cumulative regret
+for our simple cost-aware GP-UCB extension.
+
+\vspace{-0.75em}
+\begin{theorem}
+  \label{thm:cost}
+  If $c^\ast = \max_{k\in [K]}\{c_k\}$ and
+  in Algorithm~\ref{alg:gp-ucb}
+  $\beta_t = 2c^\ast \log\left[\frac{\pi^2 K t^2}{6\delta}\right]$, with probability at least $1-\delta$,
+  the cumulative regret of single-tenant, cost-aware GP-UCB is bounded above by
+  \[
+  R_T < \sqrt{T\cdot I(T)}
+  \]
+where $
+I(T) = \frac{4c^\ast \beta_T}{\log(1 + \sigma^{-2})}\sum_{t=1}^T \log(1+\sigma^{-2}\sigma^2_{t-1}(a_t))$.
+Moreover, we have the bound for the \textcolor{red}{simple regret}:
+\[
+    \bP\left(\min_{t\in [T]}r_t \le \sqrt{\frac{\tilde{I}(T)}{\sum_{t=1}^T
+        c_{a_t}}}\right) \ge 1-\delta,
+\]
+where $\tilde{I}(T) = I(T)/c^\ast$.
+\end{theorem}
+Note that $I(T)$ is proportional to the information gain, and the order is at most $\log T$ (see Theorem 5 in \cite{SrinivasKKS10} for details). Therefore, this theorem is in line with the classical GP-UCB result and yields the desired property that $R_T/T \to 0$ as $T\to \infty$.
+
+In the same spirit, this theorem also suggests that the regret at iteration $t$ (the minimal regret up to iteration $t$) converges to $0$ with respect to the running time $\sum_{t=1}^T c_{a_t}$ with high probability. 
+
+
+\section{Multi-tenant Model Selection}\label{sec:multitenant}
+
+We now present the multi-tenant model selection
+algorithm in \eml. This section is organized as follows.
+
+\noindent
+$\bullet$ We formulate the problem 
+by extending the classic single-tenant regret
+into a multi-tenant, cost-aware form. We then 
+discuss the difference compared with
+one most similar formulation~\cite{XXX}.
+
+\noindent
+$\bullet$
+We start from a very simple strategy that we call
+\rr. \rr schedules
+each user in a round robin way while each user
+uses their own single-tenant GP-UCB
+during their allocated time slices. We proved 
+a regret bound for this simple strategy.
+
+\noindent
+$\bullet$
+We then present an improved algorithm that we
+call \greedy. \greedy schedules
+each user by maximizing their potential contribution
+to the global objective. This is a novel algorithm
+and we also prove a regret bound for this strategy.
+
+\noindent
+$\bullet$
+The theoretical bound and empirical experiments
+shows a tradeoff between \rr and
+\greedy. Last, we present a \hybrid 
+strategy that balances 
+\rr and \greedy. \hybrid is the 
+default multi-tenant model selection algorithm
+in \eml.
+
+
+\subsection{Problem Formulation}
+
+In the multi-tenant setting, \eml aims
+to serve $n$ different users instead of a single user.
+Without loss of generality, assume that
+each user $i\in[n]$ has her own machine learning 
+task represented by a dataset $D_i$
+and all users can choose from the
+same set of $K$ machine learning models.
+All users share the same infrastructure,
+and {\em at a single time point only
+a single user can be served}.
+Figure~\ref{fig:problem-formulation} illustrates 
+a canonical view of this problem.
+
+
+For a dataset $D$ of a given user, 
+we use $A_k(D) \in \R_+$ to denote the performance (e.g.,  accuracy) of the $k^{th}$ model 
+$A_k$ on the dataset $D$ and use
+$A(D) \in \R_+^K$ to denote the performance of all algorithms on $D$ \textcolor{red}{Since the observation noise is very small, we do not distinguish $A_k(D)$ and its expectation $\mathbb{E}(A_k(D))$.}. Let $c_k(D)$ be the cost (execution time)
+of the $k^{th}$ model on the dataset $D$.
+In \eml we have a cost model for $c_k(D)$
+as it is much easier to estimate compared with
+the accuracy $A_k(D)$. 
+\footnote{Ji' comment: I do not think that it is necessary to involve new notations based on $D$.}
+
+\vspace{-0.5em}
+\paragraph*{Multi-tenant Regrets:} 
+We extend the definitions of instantaneous and cumulative 
+regrets for the multi-tenant setting. The key difference
+compared with the single-tenant setting is that,
+at time step $t$, there are users who are not
+served. In this case, how should we define
+the regret for these unscheduled users?
+
+The key intuition is that these unscheduled users should
+also incurred a penalty --- by not serving them,
+these users do not have a chance to
+get a better model, instead, they need to stuck
+with the same model as before. Let $\cA_t^{(i)} \subseteq [K]$
+be the set of models \eml tried for user $i$
+up to time $t$. We define the \eml multi-tenant
+regret as:
+\[
+R_T' = \sum_i \sum_t x^{(i)}_{*,t} - \max_{a \in \cA_t^{(i)}} x_{a, t}
+\]
+{\color{red}
+\[
+R_T' = \sum_i \sum_t \left(\mu^{(i)}_{*} - \mathbb{E}\max_{a \in \cA_t^{(i)}} x_{a, t}\right)
+\]
+where $\mu^(i)_*$ indicates the 
+}
+
+
 Given that only one user is scheduled at any time step $t$, how should we define the instantaneous regret for a user that is not scheduled at $t$?
 Note that the $r_t$ in Equation~\ref{eq:instant-regret} is not defined for unscheduled user.
 This would be difficult if negative rewards were allowed.
@@ -807,124 +938,16 @@ R_T/T=\frac{1}{T}\sum\nolimits_{i=1}^n R_T^i.
 \end{equation}
 The regret-free property remains desirable.
 
-\newpage
 
-\subsection{Cost-aware Single-tenant GP-UCB}
-
-We start by presenting the standard GP-UCB algorithm that targets the STCO bandit problem.
-Essentially it is a combination of using the upper confidence bound (UCB) heuristic and the Gaussian process (GP), a Bayesian optimization approach to nonlinear regression.
-The UCB heuristic prefers the arm that maximizes the quantity $\mu_k + \theta\cdot\sigma_k$, where $\mu_k$ and $\sigma_k^2$ are the observed mean and variance of the reward distribution of the arm $k\in[K]$.
-This is essentially just the upper bound of the $\theta$-confidence interval (and thus the reason for the name UCB).
-Despite its simplicity, it exhibits a good trade-off between \emph{exploration} and \emph{exploitation}.
-Intuitively, the UCB heuristic favors arms with high reward (for exploitation), \emph{and} high uncertainty (for exploration), which implies high risk but also high opportunity for gaining better reward.
-The GP-UCB algorithm further leverages GP to guide the search space from which the target reward function should be sampled.
-As more and more arms are attempted, the GP-UCB algorithm can quickly converge to identification of the best arm (i.e., best model in the context of model selection).
-Algorithm~\ref{alg:gp-ucb} presents the details of GP-UCB.
-
-\begin{algorithm}[t]    
-\scriptsize
-\caption{Single-tenant, cost-oblivious GP-UCB}          % give the algorithm a caption
-\label{alg:gp-ucb}                           % and a label for \ref{} commands later in the document
-\begin{algorithmic}[1]                    % enter the algorithmic environment
-   \REQUIRE GP prior $\mu_0$, $\sigma$, $\Sigma$, and $\delta\in (0,1)$
-   \ENSURE Return the best algorithm among all algorithms in $a_{[1:T]}$
-   \STATE Initialize $\sigma_0 = \text{diag}(\Sigma)$
-   \FOR {$t=1,2,\cdots, T$}
-   \STATE $\beta_t \rightarrow \log (Kt^2/\delta)$\\
-   \STATE $a_t \rightarrow \argmax_{k\in [K]}\mu_{t-1}(k) + \sqrt{\beta_t}\sigma_{t-1}(k)$\\
-   \STATE Observe $y_t = f(a_t) + \epsilon_t$\\
-   \STATE $\mu_t(k) = \Sigma_t(k)^\top (\Sigma_t + \sigma^2 I)^{-1} y_{[1:t]}$\\
-   \STATE $\sigma_t^2(k) = \Sigma(k, k) - \Sigma_t(k)^\top(\Sigma_t + \sigma^2 I)^{-1} \Sigma_t(k)$
-   %\STATE $\cA_K = \text{arg}\max_{k \in [K]} \mu_t(k) + \sqrt{\beta_t} \sigma_{t}(k)$
-   \ENDFOR
-\end{algorithmic}
-%\hline
-\vspace{0.5em}
-\textbf{Notation}:
-\begin{itemize}
-\item $[K] = \{1, 2, \cdots, K\}$.
-\item $a_{[1:t]} = \{a_1, \cdots, a_t\}$, where $a_i \in [K],$ for $1\le
-  i\le t$.
-\item $y_{[1:t]} = \{y_1, \cdots, y_t\}$.
-\item $\Sigma(i,j) = \Sigma_{i,j}$, for $i,j\in [K]$.
-\item $\Sigma_t(k) = [\Sigma(a_1, k), \cdots \Sigma(a_t,k)]^\top, k\in [K]$.
-\item $\Sigma_t = [\Sigma(i, j)]_{i,j\in a_{[1:t]}}$.
-\item $\epsilon_t \sim \mathcal{N}(0, \sigma^2)$.
-\end{itemize}
-\end{algorithm}
-
-
-\begin{figure}
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.45\textwidth]{figures/rr_v_greedy}
-\vspace{-1em}
-\caption{Illustration of the difference between \textsc{RoundRobin}
-and \textsc{Greedy} in multi-tenant setting.}
-\label{fig:gpucb-intuition}
+\includegraphics[width=0.9\columnwidth]{figures/multitenant}
+\vspace{-2em}
+\caption{A canonical view of the multi-tenant, cost-aware model selection problem we studied in this paper.}
+\label{fig:problem-formulation}
 \vskip -2ex
 \end{figure}
 
-
-We highlight the selection rule (i.e., the {\em allocation policy} in the bandit literature) in Algorithm~\ref{alg:gp-ucb} below, which is a slight variant of the aforementioned UCB heuristic:
-\begin{equation}\label{eq:gp-ucb}
-a_t = \argmax_{k\in [K]}\{\mu_{t-1}(k) + \sqrt{\beta_t}\sigma_{t-1}(k)\}.
-\end{equation}
-The $\beta_t$ in Equation~\ref{eq:gp-ucb} is a parameter that controls the convergence rate. With the choice of $\beta_t$ as was shown in Algorithm~\ref{alg:gp-ucb}, the regret $R_T$ can be bounded as $O(\sqrt{T})$ (up to polylog factors) with high probability. Therefore, GP-UCB is regret-free.
-
-The GP-UCB algorithm, as well as other solutions to the bandit problem, does not consider the cost of a trial.
-The arms are treated as homogeneous and the (potentially huge) cost difference in playing different arms is completely ignored.
-Apparently, more sophisticated machine learning models usually incur higher training overhead so it makes sense in practice to further consider the cost when selecting a model for evaluation.
-In a multi-tenant context, different users usually vary dramatically in their cost budgets.
-Ignoring the cost respect may therefore end up with selecting poor models for budget-stringent users, due to running out of budget and premature stop in model evaluation.
-Moreover, the performance of different models may correlate quite differently for different users, depending on the properties of the datasets, which further complicates the model selection problem.
-
-Therefore, we next extend the standard GP-UCB algorithm to a cost-aware version.
-We restrict ourselves in the single-user case but introduce the notion of cost into Algorithm~\ref{alg:gp-ucb}.
-The idea is simple. We basically replace Equation~\ref{eq:gp-ucb} by the following:
-\begin{equation}\label{eq:gp-ucb:cost}
-a_t = \argmax_{k\in [K]}\left\{\mu_{t-1}(k) + \sqrt{\frac{\beta_t}{c_k}}\sigma_{t-1}(k)\right\}.
-\end{equation}
-Here $c_k$ is the cost for one evaluation of the model $k\in[K]$.
-Intuitively, this implies that we need to lower priority for expensive models even if they have high observed reward and uncertainty.
-
-\paragraph*{Theortical Analysis}
-
-{\color{red} Single tenant, cost-aware case}
-
-% Given $\delta\in (0,1)$ and a sequence of positive numbers $\{c_k\}_{k=1}^K$,
-% consider the following optimization problem
-% \begin{equation}
-%   \label{eq:beta}
-%   \text{minimize}\quad \max_{t\in [T]}~\beta_t,
-% \end{equation}
-% subject to
-% \[
-%   \sum_{t=1}^T\sum_{k = 1}^K e^{-\frac{\beta_t}{2c_k}}\le \delta.
-% \]
-
-\begin{theorem}
-  \label{thm:cost}
-  Given $\delta\in (0,1)$ and set $\beta_t = 2c^\ast \log\left[\frac{\pi^2 K t^2}{6\delta}\right]$ with $c^\ast = \max_{k\in [K]}\{c_k\}$. Then the total regret of the single tenant, cost-aware GP-UCB is bounded above by
-  \[
-  \sqrt{T\cdot I(T)}
-  \]
-%   Then the
-%   simple regret of the single 
-%   $\sqrt{I(T)/(\sum_{t=1}^Tc_{a_t})}$ with probability at
-%   least $1-\delta$, i.e.,
-%   \[
-%     \bP\left(\min_{t\in [T]}r_t \le \sqrt{\frac{I(T)}{\sum_{t=1}^T
-%         c_{a_t}}}\right) \ge 1-\delta,
-% \]
-where 
-\[
-I(T) = \frac{4c^\ast \beta_T}{\log(1 + \sigma^{-2})}\sum_{t=1}^T \log(1+\sigma^{-2}\sigma^2_{t-1}(a_t))
-\]
-\end{theorem}
-Note that $I(T)$ is bounded by $XXX$ \cite{}. This theorem suggests that the regret at iteration $t$ (the minimal regret up to iteration $t$) converges to $0$ with respect to the running time $\sum_{t=1}^T c_{a_t}$ with high probability. 
-
-
-\newpage
 
 \begin{algorithm} [t]                     % enter the algorithm environment
 \scriptsize
@@ -973,19 +996,27 @@ Note that $I(T)$ is bounded by $XXX$ \cite{}. This theorem suggests that the reg
 
 
 \subsection{Multi-tenant GP-UCB}
-When there are multiple tenants are available, we can only pick one tenant to run at each round. Our goal is to minimize the cummunative regret 
+When multiple tenants are available, we can only pick one tenant to run at each round. Our goal is to minimize the cumulative regret 
+\textcolor{blue}{
 \[
-define the regret over here.
+R'_T = \sum_{t} \mathbb{E}\left(c^{I_t}_{a_t^{I_t}}\sum_{i} \left(\mu^{(i)}_* -  \max_{a\in \mathcal{A}_t^{(i)}}x_{a, t}\right)\right)
 \]
-Note that this regreat is not the sum of regrets of all tenants, since at any time point the regret is computed from current regrets from all tenents. It means that if we do not pick tenant $i$ at round $t$, then its regeat at round $t-1$ will be undertaken at round $t$ again.
+}
+\[
+R_T = \sum_{t=1}^T\sum_{i=1}^n c^{I_t}_{a_{t}^{I_t}}r^i_{t^i},
+\]
+where $c_i^k$ is the cost of tenant $i$ choosing model $k\in [K^i]$, $r^i_t = f(a^{i,\ast})-f(a^i_t)$, and $I_t$ is the model selected at round $t$.
 
-The most straightforward idea is applying the FIFS principle: we serve each tenant until find out its optimal algorithm before move to the next one. Unfortunately, it gives a very terrible cummunative regret:
+
+
+Note that this regret is not the sum of regrets of all tenants, since at any time point the regret is computed {\color{red}from current regrets from all tenants}. It means that if we do not pick tenant $i$ at round $t$, then its regret at round $t-1$ will be undertaken at round $t$ again. Therefore, we use the time index $t^i$, which is the most recent time when tenant $i$ is picked, up to $t$, i.e.,
 \[
-xx
+t^i = \argmax\{s: i=I_s, 1\le s\le t\}.
 \]
+The most straightforward idea is applying the FIFS principle: we serve each tenant until find out its optimal algorithm before move to the next one. Unfortunately, it gives a very terrible cumulative regret, which is of order $T$.
 
 \subsubsection{Round Robin GP-UCB}
-A simple idea to avoid the embarrasement is to apply the round robin priciple, that is, each tenant will be selected alternatively. The native approach admits the following cummunative regret.
+A simple idea to avoid the embarrassment is to apply the round robin principle, that is, each tenant will be selected alternatively. The native approach admits the following cumulative regret.
 
 
 \paragraph*{Theoretical Analysis}
@@ -995,25 +1026,30 @@ A simple idea to avoid the embarrasement is to apply the round robin priciple, t
 \begin{theorem}
   \label{thm:rr}
   Given $\delta\in (0,1)$ and set $\beta_t^i = 2c^\ast \log\left[\frac{\pi^2 n K^\ast t^2}{6\delta}\right]$ with $c^\ast = \max_{i\in [n], k\in [K^i]}\{c^i_k\}$ and $K^\ast = \max_{i\in [n]}\{K^i\}$. Then the
-  total regret of Round Robin GP-UCB is bounded above by
+  cumulative regret of Round Robin GP-UCB is bounded above by
   \[
-     \sqrt{n T}\sum_{i=1}^n \sqrt{I_i([T(i)])}
+     R'_T \leq \sqrt{n T}\sum_{i=1}^n \sqrt{I_i([T(i)])}
   \]
   with probability at least $1-\delta$,
   where
   \begin{align*}
-    I_i([T(i)]) & = \frac{4 c^\ast \beta^\ast}{\log(1 + (\sigma^\ast)^{-2})}\\
+    I_i([T(i)]) & = \frac{8 (c^\ast)^2 \beta^\ast}{c_\ast \log(1 + (\sigma^\ast)^{-2})}\\
     &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2}(\sigma^i_{t-1}(a^i_{t}))^2\right),
   \end{align*}
-  with $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$ and $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$.
+  with $c_\ast = \min_{i\in [n], k\in [K^i]}\{c^i_k\}$,  $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$, $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$, and $T(i)$ is the time point set when tenant $i$ is picked, up to time $T$, i.e.,
+  \begin{equation}
+    \label{eq:T(i)}
+    T(i) = \{s: 1\le s\le T, I_s = i\}.
+  \end{equation}
 \end{theorem}
-Key observations include that
-\begin{itemize}
-\item When the runing time goes infinity, the regret will converge to zero;
-\item If assume the cost for all algorithms to be identical, then the regret at time $t$ decreases to $0$ with a rate $\frac{n^1.5}{T^0.5}$.
-\end{itemize}
 
-\newpage
+In the Round Robin case, each tenant is picked for the same amount of rounds, that is, all $|T(i)|$'s are roughly the same, bounded by $\lceil T/n\rceil$. Then $I_i([T(i)])$ can be uniformly bounded by $\log (T/n)$ for common used covariance (kernel) matrices; see Theorem 5 in \cite{SrinivasKKS10} for details, and thus the cumulative regret is bounded by (up to a constant factor) 
+\begin{equation}
+n^{1.5}\sqrt{T \log |T(i)|} = n^{1.5}\sqrt{T \log {T\over n}}
+\label{eq:RR_simple_bound}
+\end{equation}
+Therefore, when the running time goes to infinity, the regret will converge to zero.
+
 
 \subsubsection{Multi-tenant GP-UCB}
 
@@ -1104,7 +1140,7 @@ We next discuss this by-product in more detail by presenting a theoretical analy
 \begin{theorem}
   \label{thm:multi-cost}
   Given $\delta\in (0,1)$ and set $\beta_t^i = 2c^\ast \log\left[\frac{\pi^2 n K^\ast t^}{6\delta}\right]$ with $c^\ast = \max_{i\in [n], k\in [K^i]}\{c^i_k\}$ and $K^\ast = \max_{i\in [n]}\{K^i\}$. Then the
-  total regret of Multi-tenant GP-UCB is bounded above by
+  cumulative regret of Multi-tenant GP-UCB is bounded above by
   \[
     n \sqrt{T}\sqrt{\sum_{i=1}^n I_i([T(i)])}
   \]
@@ -1114,7 +1150,7 @@ We next discuss this by-product in more detail by presenting a theoretical analy
     I_i([T(i)]) & =  \frac{4c^\ast \beta^\ast}{\log(1 + (\sigma^\ast)^{-2})}\\
     &\qquad \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2}(\sigma^i_{t-1}(a^i_{t}))^2\right),
   \end{align*}
-  with $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$  and $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$.
+  with $\sigma^\ast= \max_{i\in [n]}\{\sigma^i\}$  and $\beta^\ast = 2c^\ast \log\left[\frac{\pi^2 n K^\ast T^2}{6\delta}\right]$, and $T(i)$ is defined in \eqref{eq:T(i)}.
 \end{theorem}
 
 It is observed that $I_i([T(i)])$ is proportional to the information gain for each user $i$. In particular, if the kernel function or covariance matrix is linear (see
@@ -1133,13 +1169,10 @@ It is observed that $I_i([T(i)])$ is proportional to the information gain for ea
   \]
   In this case, the total regret is bounded (up to some constant) by
   \[
- n^{3/2}\sqrt{T \log\left(\frac{T}{n}\right)}.
+ n^{3/2}\sqrt{T\sum_{i=1}^n \log(|T(i)|)}  \leq \underbrace{n^{3/2}\sqrt{T \log\left(\frac{T}{n}\right)}}_{\text{the regret for RR, see \eqref{eq:RR_simple_bound}}}.
   \]
-For other two common used kernel functions: the Squared Exponential kernel and the Mat\'{e}rn kernel, we can also get a bound, which is sublinear in $T$. We refer to Section 5.2 in \cite{SrinivasKKS10} for details.
+For other two common used kernel functions: the Squared Exponential kernel and the Mat\'{e}rn kernel, we can also get a bound, which is sublinear in $T$, and thus $R_T/T \to 0$ as $T\to\infty$. We refer to Section 5.2 in \cite{SrinivasKKS10} for details. Comparing to RR, we can observe that the regret of multi-tenant GP-UCB is slightly better than the one of RR, see \eqref{eq:RR_simple_bound}.  
 
-\[
-Comparison to RR.
-\]
 
 \subsection{Discussion and A Hybrid Approach}
 
@@ -1667,7 +1700,7 @@ the kernel (10\%, 50\%, 100\%), and compare their performance
 in Figure~\ref{fig:training:oblivious} and~\ref{fig:training:aware}.
 We see that by having more models to 
 calculate kernel significantly improves
-the performance of \eml. However, naturally,
+the performance of \eml. On the other hand,
 we also observe the phenomenon of ``diminishing
 return'' --- having 50\% of the
 training data has similar performance
@@ -2098,7 +2131,9 @@ equally hard, why not round-robin)
 \vspace{2em}
 \paragraph*{Proof of Theorem \ref{thm:cost}}
 \begin{proof}
-  By the definition of $a_t$ in our algorithm, we have
+We here only show the proof of the bound for the simple regret, and the cumulative regret case can be shown by setting $n=1$ in the proof of multi-tenant case.
+
+By the definition of $a_t$ in our algorithm, we have
   \[
     \mu_{t-1}(a_t) + \sqrt{\frac{\beta_t}{c_{a_t}}}\sigma_{t-1}(a_t) \ge
     \mu_{t-1}(a^\ast) + \sqrt{\frac{\beta_t}{c_{a^\ast}}}\sigma_{t-1}(a^\ast).
@@ -2117,17 +2152,17 @@ equally hard, why not round-robin)
     c_{a_t} r_t^2 &\le c_{a_t} \cdot 4\beta_t c^{-1}_{a_t} \sigma_{t-1}^2(a_t) = 4\beta_t \sigma_{t-1}^2(a_t)\\
                   & \le 4\sigma^2 \beta_T \frac{\sigma^{-2}\sigma^2_{t-1}(a_t)}{\log(1+\sigma^{-2}\sigma^2_{t-1}(a_t))}\cdot \log(1+\sigma^{-2}\sigma^2_{t-1}(a_t))\\
                   & \le 4\sigma^2 \beta_T \frac{\sigma^{-2}}{\log(1 + \sigma^{-2})}\cdot \log(1+\sigma^{-2}\sigma^2_{t-1}(a_t))\\
-                  & = C_1 \beta_T\cdot \frac{1}{2}\log(1+\sigma^{-2}\sigma^2_{t-1}(a_t)),
+                  & = \frac{4\beta_T}{\log(1 + \sigma^{-2})}\cdot \log(1+\sigma^{-2}\sigma^2_{t-1}(a_t)),
   \end{align*}
   and thus
   \[
-    \sum_{t=1}^Tc_{a_t} r_t^2 \le C_1\beta_T I(T).
+    \sum_{t=1}^Tc_{a_t} r_t^2 \le \tilde{I}(T).
   \]
   By Cauchy-Schwarz inequality, we obtain
   \begin{align*}
     \min_{t\in [T]}r_t & 
                          \le \frac{\sum_{t=1}^Tc_{a_t}r_t}{\sum_{t=1}^Tc_{a_t}}\le \frac{\sqrt{\sum_{t=1}^Tc_{a_t}}\cdot \sqrt{\sum_{t=1}^Tc_{a_t} r_t^2}}{\sum_{t=1}^Tc_{a_t}}\\
-& \le \sqrt{\frac{C_1\beta_T I(T)}{\sum_{t=1}^T c_{a_t}}},
+& \le \sqrt{\frac{\tilde{I}(T)}{\sum_{t=1}^T c_{a_t}}},
   \end{align*}
 which completes the proof.
 \end{proof}
@@ -2156,19 +2191,18 @@ which completes the proof.
   For each user $i\in [n]$, we have
   \begin{align*}
     r^i_{t^i} & = f^i(a^{i,\ast}) - f^i(a^i_{t^i})\\
-    & \le \sqrt{\frac{\beta^i_{t^i}}{c^i_{a^i_{t}}}}\sigma^i_{t-1}(a^i_{t^i}) +\mu^i_{t-1}(a^i_{t^i}) - f^i(a^i_{t_i})\\
+    & \le \sqrt{\frac{\beta^i_{t^i}}{c^i_{a^i_{t}}}}\sigma^i_{t-1}(a^i_{t^i}) +\mu^i_{t-1}(a^i_{t^i}) - f^i(a^i_{t^i})\\
     & \le 2
     \sqrt{\frac{\beta^i_{t^i}}{c^i_{a^i_{t}}}}\sigma^i_{t-1}(a^i_{t^i}),
   \end{align*}
    and thus by algorithm,
   \begin{align*}
-    \sum_{t=1}^T \sum_{i=1}^n c^i_{a^i_t} r^i_{t^i}
-    & \le \sum_{t=1}                                                    ^T \sum_{i=1}^n c^i_{a_t^i} 2 \sqrt{\frac{\beta^i_{t^i}}{c^i_{a^i_{t}}}}\sigma^i_{t-1}(a^i_{t^i})\\
-        & = 2  \sum_{t=1}^T \sum_{i=1}^n \sqrt{c^i_{a^i_{t}}\beta^i_{t^i}}\sigma^i_{t-1}(a^i_{t^i})\\
-    & = \sum_{i=1}^n\sum_{t\in T(i)} 2n\sqrt{c^i_{a^i_{t}}\beta^i_{t^i}}\sigma^i_{t-1}(a^i_{t})\\
-    & \le 2n \sqrt{c^\ast\beta^\ast}\sum_{i=1}^n\sum_{t\in T(i)}\sigma^i_{t-1}(a^i_{t})\\
-    & \le 2n \sqrt{c^\ast\beta^\ast}\sum_{i=1}^n\sqrt{|T(i)|}\sqrt{\sum_{t\in T(i)} (\sigma^i_{t-1}(a^i_{t}))^2}\\
-    & \le 2n \sqrt{c^\ast\beta^\ast}\sum_{i=1}^n\sqrt{\frac{2T}{n}}\sqrt{\sum_{t\in T(i)} (\sigma^i_{t-1}(a^i_{t}))^2}
+    \sum_{t=1}^T \sum_{i=1}^n c^{I_t}_{a^{I_t}_t} r^i_{t^i}
+    & \le \sum_{t=1}                                                    ^T \sum_{i=1}^n c^{I_t}_{a^{I_t}_t} 2 \sqrt{\frac{\beta^i_{t^i}}{c^i_{a^i_{t^i}}}}\sigma^i_{t-1}(a^i_{t^i})\\
+        & \le 2 \sqrt{\frac{(c^\ast)^2}{c_\ast}} \sum_{t=1}^T \sum_{i=1}^n \sqrt{\beta^i_{t^i}}\sigma^i_{t-1}(a^i_{t^i})\\
+    & = 2 n \sqrt{\frac{(c^\ast)^2\beta^\ast}{c_\ast}}\sum_{i=1}^n\sum_{t\in T(i)} \sigma^i_{t-1}(a^i_{t})\\
+    & \le 2 n \sqrt{\frac{(c^\ast)^2\beta^\ast}{c_\ast}}\sum_{i=1}^n\sqrt{|T(i)|}\sqrt{\sum_{t\in T(i)} (\sigma^i_{t-1}(a^i_{t}))^2}\\
+    & \le 2 n \sqrt{\frac{(c^\ast)^2\beta^\ast}{c_\ast}}\sum_{i=1}^n\sqrt{\frac{2T}{n}}\sqrt{\sum_{t\in T(i)} (\sigma^i_{t-1}(a^i_{t}))^2}
   \end{align*}
   Note that
 \begin{align*}
@@ -2188,7 +2222,7 @@ which completes the proof.
   \end{align*}
   Therefore,
   \[
-    \sum_{t=1}^T \sum_{i=1}^n c^i_{a^i_t} r^i_{t^i} \le \sqrt{n T}\sum_{i=1}^n \sqrt{I_i([T(i)])}.
+    \sum_{t=1}^T \sum_{i=1}^n c^{I_t}_{a^{I_t}_t} r^i_{t^i} \le \sqrt{n T}\sum_{i=1}^n \sqrt{I_i([T(i)])}.
   \]
 \end{proof}
 
@@ -2217,15 +2251,15 @@ which completes the proof.
   \begin{align*}
     r^i_{t^i} & = f^i(a^{i,\ast}) - f^i(a^i_{t_i})\\
     & \le \tilde{\sigma}^i_{t^i} \le 2
-    \sqrt{\frac{\beta^i_{t^i}}{c^i_{a^i_{t}}}}\sigma^i_{t-1}(a^i_{t^i}),\ \forall
+    \sqrt{\frac{\beta^i_{t^i}}{c^i_{a^i_{t^i}}}}\sigma^i_{t-1}(a^i_{t^i}),\ \forall
     i\in [n], t\in [T],
   \end{align*}
   and thus,
   \begin{align*}
-    \sum_{t=1}^T \sum_{i=1}^n c^i_{a^i_t} r^i_{t^i}
-    & \le \sum_{t=1}                                                    ^T \sum_{i=1}^n c^i_{a_t^i} 2 \sqrt{\frac{\beta^i_{t^i}}{c^i_{a^i_{t}}}}\sigma^i_{t-1}(a^i_{t^i})\\
-        & = 2  \sum_{t=1}^T \sum_{i=1}^n \sqrt{c^i_{a^i_{t}}\beta^i_{t^i}}\sigma^i_{t-1}(a^i_{t^i})\\
-    & \le 2 n \sum_{t=1}^T \sqrt{c^{I_t}_{a^{I_t}_{t}}\beta^{I_t}_{t}} \sigma^{I_t}_{t-1}(a^{I_t}_t) \quad(\text{since}~t^{I_t}=t)\\
+    \sum_{t=1}^T \sum_{i=1}^n c^{I_t}_{a^{I_t}_t} r^i_{t^i}
+    & \le \sum_{t=1}^T c^{I_t}_{a^{I_t}_t} \sum_{i=1}^n  2 \sqrt{\frac{\beta^i_{t^i}}{c^i_{a^i_{t^i}}}}\sigma^i_{t-1}(a^i_{t^i})\\
+        & \le 2n  \sum_{t=1}^T c^{I_t}_{a^{I_t}_t} \sqrt{\frac{\beta^{I_t}_{t}}{c^{I_t}_{a^{I_t}_{t}}}} \sigma^{I_t}_{t-1}(a^{I_t}_t) \quad(\text{since}~t^{I_t}=t)\\
+    & = 2 n \sum_{t=1}^T \sqrt{c^{I_t}_{a^{I_t}_{t}}\beta^{I_t}_{t}} \sigma^{I_t}_{t-1}(a^{I_t}_t) \\
     & \le 2n \sqrt{\sum_{t=1}^Tc^{I_t}_{a^{I_t}_{t}}\beta^{I_t}_{t}}\sqrt{\sum_{t=1}^T (\sigma^{I_t}_{t-1}(a^{I_t}_t))^2}\\
     & \le 2n \sqrt{c^\ast\beta^\ast T}\sqrt{\sum_{t=1}^T (\sigma^{I_t}_{t-1}(a^{I_t}_t))^2}.
   \end{align*}
@@ -2252,7 +2286,7 @@ which completes the proof.
   \end{align*}
   Finally, we obtain the bound for the total regret:
   \begin{align*}
-    & \sum_{t=1}^T \sum_{i=1}^n c^i_{a^i_t} r^i_{t^i}\\
+    & \sum_{t=1}^T \sum_{i=1}^n c^{I_t}_{a^{I_t}_t} r^i_{t^i}\\
      \le \ & 2n \sqrt{c^\ast \beta^\ast T}\\
     & \cdot \sqrt{\sum_{i=1}^n \frac{1}{\log\left(1 + (\sigma^i)^{-2}\right)} \sum_{t\in T(i)} \log\left(1 + (\sigma^i)^{-2} (\sigma^i_{t-1}(a^i_{t}))^2\right)}\\
     =\ & n \sqrt{T} \sqrt{\sum_{i=1}^n I_i([T(i)])},

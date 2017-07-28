@@ -356,3 +356,29 @@ equally hard, why not round-robin)
 %Model-irrelevant noise means user baseline quality (so stronger model-irrelevant noise means reducing the impact of model correlation, i.e., a smaller $\alpha$).\\
 
 %Impact of cost-awareness: when reach the same accuracy loss, how much total cost have we spent?
+
+\vspace{-1em}
+\paragraph*{Limitations}
+As the first attempt
+of the multitenant model selection problem,
+this paper has the following limitations.
+From the theortical perspective, the regret bound
+is not yet theortically optimal and tight.
+From the practical perspective,
+the current framework only supports the case where
+the whole GPU pool are treated as a single device.
+With our current scale (29 GPUs), this is not
+a problem as we can achieve linear scale up
+with all GPUs to train a single model. However, as our service grows
+rapidly, we need to extend our current framework
+to be aware of multiple devices in the near future.
+Another limitation is that our
+analysis focuses on GP-UCB and it is not clear
+how to integrate other algorithms such as
+GP-EI and GP-PI into a multi-tenant 
+framework. Last, we define the global
+happiness of all users as the sum 
+of their regrets. It is not clear how to
+integrate hard rules such as ``deadline''
+associated with each user and design
+algorithms for other aggregation functions.
