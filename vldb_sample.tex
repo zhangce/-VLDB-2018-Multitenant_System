@@ -153,7 +153,7 @@ Although we also have students serving as ``consultants''
 to answer user questions, it is still our
 users who run the machine learning systems
 by themselves in most cases. As of today, our infrastructure
-contains 29 TITAN X GPUs and 100 TB storage
+contains 24 TITAN X GPUs and 100 TB storage
 shared by more than ten research groups
 from areas that include astrophysics,
 biology, social sciences, meteorology, 
@@ -375,7 +375,7 @@ We report experimental evaluation results in Section~\ref{sec:experiments}, and 
 
 \begin{figure*}
 \centering
-\includegraphics[width=0.8\textwidth]{figures/easeml}
+\includegraphics[width=0.7\textwidth]{figures/easeml}
 \vspace{-1em}
 \caption{System architecture of \texttt{ease.ml}.}
 \label{fig:architecture}
@@ -386,10 +386,10 @@ We report experimental evaluation results in Section~\ref{sec:experiments}, and 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.5\textwidth]{figures/syntax}
-\vspace{-2em}
+\vspace{-3em}
 \caption{Formal Syntax of an \eml Program}
 \label{fig:syntax}
-\vspace{-1em}
+\vspace{-2em}
 \end{figure}
 
 
@@ -413,7 +413,14 @@ system with (1) the size of the input, (2) the size of the output,
 and (3) pairs of examples that the function aims to approximate.
 Figure~\ref{fig:architecture} illustrates the system architecture of \eml.
 
-\vspace{-0.5em}
+\vspace{-1em}
+\paragraph*{Implementation Details} Due to space
+limitation, we focus on the components that significantly
+different from previous systems and 
+leave the implementation
+details to the arXiv version. 
+
+\vspace{-0.75em}
 \subsection{System Architecture and Implementation}
 
 We walkthrough each component of \eml and 
@@ -537,10 +544,10 @@ are natural number constants; \texttt{a}, \texttt{b}, and \texttt{c} are of the 
 matching for arbitrary ``tail'' of an array. Matching order
 goes from top to bottom.}
 \label{fig:templates}
-\vspace{-1em}
+%\vspace{-1em}
 \end{figure}
 
-
+%\vspace{-2em}
 \paragraph*{Automatic Model Exploration}
 
 The above interface provides the user with a high-level abstraction
@@ -587,19 +594,14 @@ candidate model.
 {\bf (Automatic Model Selection)} 
 Given a set of candidate models, \eml decides on an order of
 execution. The current execution strategy of \eml is to 
-use {\em all} its 29 GPUs to train a single 
-model. We made this design decision 
-because we were able to achieve near-linear scale-up
-of training at this scale. (in the near 
-future, \eml will need to allow a more flexible resource 
-allocation strategy to support a resource pool 
-with hundreds of GPUs.) Because there are different
+use {\em all} its GPUs to train a single 
+model (see Section~\ref{sec:limitations}
+for a discussion about this design decision) Because there are different
 users using \eml at the same time, \eml also needs
 to decide which user to serve at the current time.
-This problem motivated the technical problem of this paper,
-which we describe in detail in Section~\ref{sec:multitenant}.
+This problem motivated the core technical problem of this paper, which we will focus on in Sectin~\ref{sec:singletenant} and Section~\ref{sec:multitenant}.
 
-\vspace{-1em}
+\vspace{-0.5em}
 \paragraph*{Discussion: Hyperparameter Tuning}
 We highlight one design decision in \eml
 that is not optimal. \eml also conducts automatic
@@ -612,10 +614,6 @@ would be to fuse the hyperparameter tuning subsystem
 with the model-selection subsystem to better
 utilize available resources to maximize the
 {\em global satisfaction of all users}.
-
-
-
-
 
 
 
@@ -698,7 +696,6 @@ the upper bound of $R_T'$, for the rest of this paper,
 we will always try to find the upper bound for 
 the standard cumulative regret $R_T$ instead of 
 $R_T'$ directly.
-
 
 
 \begin{algorithm}[t!]    
@@ -1038,7 +1035,7 @@ that automatically manages resource
 allocations among multiple users.
 
 \vspace{-0.5em}
-\paragraph*{Discussion: Relation to 
+\paragraph*{Relation to 
 Multi-task Model Selection}
 We compare our multi-tenant
 regret with the most similar multi-task
@@ -1325,7 +1322,7 @@ We then switch to the round-robin user-selection strategy so that the algorithm 
 We used this hybrid approach in our experimental evaluation (Section~\ref{sec:experiments}), where we set $s=10$.
 As we have just discussed, this hybrid approach observes the same regret bound as Algorithm~\ref{alg:mc-general} because using a round-robin user-selection strategy instead does not change the regret bound.
 
-\vspace{0.5em}
+%\vspace{0.5em}
 \subsection{Discussion on Limitations} \label{sec:limitations}
 
 As the first attempt
@@ -1336,9 +1333,14 @@ is not yet theortically optimal.
 From the practical perspective,
 the current framework only supports the case where
 the whole GPU pool is treated as a single device.
-With our current scale (29 GPUs), this is not
-a problem as we can achieve linear scaleup
-with all GPUs to train a single model. However, as our service grows
+With our current scale, this is not
+a problem as our deep learning
+subsystem achieves almost linear scaleup
+in our setup
+(all machines are connected with InfiniBand,
+all communications are in low precision~\cite{XXX},
+and we tune learning rate following Goyal et al.~\cite{XXX}).
+However, as our service grows
 rapidly, we will need to extend our current framework
 such that it is aware of multiple devices in the near future.
 Another limitation is that our
@@ -1815,12 +1817,12 @@ becomes more useful.
 \vspace{-1em}
 \paragraph*{Impact of Cost-Awareness}
 We validate the impact of using 
-a cost-aware model-selection algorithm
+a cost-aware algorithm
 for each user. We conduct a lesion
 study by disabling the cost-aware
 component in \eml (set $c_{i,j}=1$
 for GP-UCB). Figure~\ref{fig:impact-cost-aware}
-shows the result on the \textsc{DeepLearning} data set.
+shows the result.
 We see that considering the
 execution cost of the model significantly
 improves the performance of the system.
@@ -1896,11 +1898,16 @@ One decision we made in \eml that is reflected in
 our experiment protocol is that we are
 treating all GPUs we have as {\em a single device}.
 The rationale behind this decision is that 
-we are able to obtain linear scaleup to
-29 GPUs for all our models. 
+we are able to obtain almost linear scaleup to
+24 GPUs for all our models --- in our
+setting we have 8 GPUs per machine while
+all machines are connected by InfiniBand.
+Moreover, all data movements are conducted in
+low precision as described 
+in our previous work~\cite{ZipML}. 
 Consider a multi-device alternative
-with 29 users in which we allocate one GPU to each user.
-Both alternatives require the same 
+with 24 users in which we allocate one GPU to each user.
+Both alternatives require the similar 
 amount of GPU-time to finish training. However,
 the single-device strategy returns a model
 faster for {\em some} users. In fact,
