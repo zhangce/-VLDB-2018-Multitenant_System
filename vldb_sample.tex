@@ -742,7 +742,7 @@ and \textsc{Greedy}.}
 \vspace{-1em}
 \subsection{Cost-Oblivious GP-UCB}
 
-We start from the standard GP-UCB algorithm for a single-tenant bandit problem.
+We start from the standard GP-UCB algorithm~\cite{DBLP:journals/ftml/BubeckC12} for a single-tenant bandit problem.
 The key idea of GP-UCB is to combine the Gaussian Process (GP),
 which models the belief at time $t$ on the reward of arms $\{x_{k,{t+1}}\}$
 at the next timestamp, with the upper confidence bound (UCB) 
@@ -1338,8 +1338,8 @@ a problem as our deep learning
 subsystem achieves almost linear scaleup
 in our setup
 (all machines are connected with InfiniBand,
-all communications are in low precision~\cite{XXX},
-and we tune learning rate following Goyal et al.~\cite{XXX}).
+all communications are in low precision~\cite{zhang2016zipml},
+and we tune learning rate following Goyal et al.~\cite{2017arXiv170602677G}).
 However, as our service grows
 rapidly, we will need to extend our current framework
 such that it is aware of multiple devices in the near future.
@@ -1904,7 +1904,7 @@ setting we have 8 GPUs per machine while
 all machines are connected by InfiniBand.
 Moreover, all data movements are conducted in
 low precision as described 
-in our previous work~\cite{ZipML}. 
+in our previous work~\cite{zhang2016zipml}. 
 Consider a multi-device alternative
 with 24 users in which we allocate one GPU to each user.
 Both alternatives require the similar 
